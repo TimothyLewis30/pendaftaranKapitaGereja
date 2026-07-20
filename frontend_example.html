@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registration App - Frontend Example</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+        padding: 20px;
+      }
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+      }
+      .card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .card h2 {
+        margin-bottom: 15px;
+        color: #444;
+        font-size: 18px;
+      }
+      .form-group {
+        margin-bottom: 12px;
+      }
+      .form-group label {
+        display: block;
+        margin-bottom: 4px;
+        font-weight: bold;
+        color: #555;
+        font-size: 14px;
+      }
+      .form-group input,
+      .form-group select,
+      .form-group textarea {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+      }
+      .btn-primary {
+        background: #007bff;
+        color: white;
+      }
+      .btn-success {
+        background: #28a745;
+        color: white;
+      }
+      .btn:hover {
+        opacity: 0.9;
+      }
+      .result {
+        margin-top: 15px;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 13px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .row {
+        display: flex;
+        gap: 15px;
+      }
+      .row .form-group {
+        flex: 1;
+      }
+      .tabs {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 15px;
+      }
+      .tab {
+        padding: 8px 16px;
+        background: #e9ecef;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .tab.active {
+        background: #007bff;
+        color: white;
+      }
+      .hidden {
+        display: none;
+      }
+      .log {
+        font-size: 12px;
+        color: #888;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Registration App - API Demo</h1>
+
+      <!-- Config -->
+      <div class="card">
+        <h2>Konfigurasi</h2>
+        <div class="row">
+          <div class="form-group">
+            <label>Base URL</label>
+            <input type="text" id="baseUrl" value="http://127.0.0.1:8080" />
+          </div>
+          <div class="form-group">
+            <label>Secret Key</label>
+            <input
+              type="text"
+              id="secretKey"
+              value="your-secret-key-change-in-production"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Gereja -->
+      <div class="card">
+        <h2>Gereja</h2>
+        <button class="btn btn-primary" onclick="getAllChurches()">
+          Get All Churches
+        </button>
+        <div class="row">
+          <div class="form-group">
+            <label>Gereja ID</label>
+            <input type="number" id="churchId" value="1" />
+          </div>
+          <div class="form-group" style="display: flex; align-items: flex-end">
+            <button class="btn btn-primary" onclick="getChurchDetail()">
+              Get Detail
+            </button>
+          </div>
+        </div>
+        <div id="churchResult" class="result"></div>
+      </div>
+
+      <!-- Kapita -->
+      <div class="card">
+        <h2>Kapita</h2>
+        <div class="tabs">
+          <button class="tab active" onclick="showKapitaTab('list', this)">
+            List
+          </button>
+          <button class="tab" onclick="showKapitaTab('add', this)">
+            Tambah
+          </button>
+        </div>
+        <div id="kapitaListTab">
+          <button class="btn btn-primary" onclick="getAllKapita()">
+            Get All Kapita
+          </button>
+        </div>
+        <div id="kapitaAddTab" class="hidden">
+          <div class="form-group">
+            <label>Nama Kapita</label>
+            <input type="text" id="kapitaName" placeholder="Kapita 1" />
+          </div>
+          <button class="btn btn-success" onclick="createKapita()">
+            Tambah Kapita
+          </button>
+        </div>
+        <div id="kapitaResult" class="result"></div>
+      </div>
+
+      <!-- Registrations -->
+      <div class="card">
+        <h2>Registrations</h2>
+        <div class="tabs">
+          <button class="tab active" onclick="showRegTab('add', this)">
+            Daftar Baru
+          </button>
+          <button class="tab" onclick="showRegTab('check', this)">
+            Cek Email
+          </button>
+          <button class="tab" onclick="showRegTab('detail', this)">
+            Detail
+          </button>
+        </div>
+        <div id="regAddTab">
+          <div class="row">
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" id="regFullName" placeholder="Budi Santoso" />
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" id="regEmail" placeholder="budi@email.com" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="form-group">
+              <label>Phone</label>
+              <input type="text" id="regPhone" placeholder="08123456789" />
+            </div>
+            <div class="form-group">
+              <label>Birth Date</label>
+              <input type="date" id="regBirthDate" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Address</label>
+            <input
+              type="text"
+              id="regAddress"
+              placeholder="Jl. Merdeka No. 1"
+            />
+          </div>
+          <div class="row">
+            <div class="form-group">
+              <label>Church ID</label>
+              <input type="number" id="regChurchId" value="1" />
+            </div>
+            <div class="form-group">
+              <label>Notes</label>
+              <input type="text" id="regNotes" placeholder="Optional" />
+            </div>
+          </div>
+          <button class="btn btn-success" onclick="createRegistration()">
+            Daftar
+          </button>
+        </div>
+        <div id="regCheckTab" class="hidden">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="checkEmail" placeholder="budi@email.com" />
+          </div>
+          <button class="btn btn-primary" onclick="checkEmail()">
+            Cek Email
+          </button>
+        </div>
+        <div id="regDetailTab" class="hidden">
+          <div class="form-group">
+            <label>Registration ID</label>
+            <input type="number" id="regId" value="1" />
+          </div>
+          <button class="btn btn-primary" onclick="getRegistrationDetail()">
+            Get Detail
+          </button>
+        </div>
+        <div id="regResult" class="result"></div>
+      </div>
+
+      <!-- Users -->
+      <div class="card">
+        <h2>Users (Tabel User)</h2>
+        <div class="tabs">
+          <button class="tab active" onclick="showUserTab('list', this)">
+            List
+          </button>
+          <button class="tab" onclick="showUserTab('add', this)">Tambah</button>
+        </div>
+        <div id="userListTab">
+          <button class="btn btn-primary" onclick="getAllUsers()">
+            Get All Users
+          </button>
+        </div>
+        <div id="userAddTab" class="hidden">
+          <div class="row">
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" id="userFullName" placeholder="Budi Santoso" />
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" id="userEmail" placeholder="budi@email.com" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="form-group">
+              <label>Phone</label>
+              <input type="text" id="userPhone" placeholder="08123456789" />
+            </div>
+            <div class="form-group">
+              <label>Birth Date</label>
+              <input type="date" id="userBirthDate" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Address</label>
+            <input
+              type="text"
+              id="userAddress"
+              placeholder="Jl. Merdeka No. 1"
+            />
+          </div>
+          <div class="row">
+            <div class="form-group">
+              <label>Church ID</label>
+              <input type="number" id="userChurchId" value="1" />
+            </div>
+            <div class="form-group">
+              <label>Kapita ID</label>
+              <input type="number" id="userKapitaId" value="1" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Notes</label>
+            <input type="text" id="userNotes" placeholder="Optional" />
+          </div>
+          <button class="btn btn-success" onclick="createUser()">
+            Tambah User
+          </button>
+        </div>
+        <div id="userResult" class="result"></div>
+      </div>
+    </div>
+
+    <!-- CryptoJS CDN for SHA-256 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script>
+      // =====================================================
+      //  HELPER: Generate Signature & Headers
+      // =====================================================
+      function generateHeaders(body = '{}') {
+        const secret = document.getElementById('secretKey').value;
+        const salt = generateSalt();
+        const raw = 'APIKAPITAGKYALSUT' + secret + salt + body;
+        const signature = CryptoJS.SHA256(raw).toString();
+
+        return {
+          'Content-Type': 'application/json',
+          'X-Salt': salt,
+          'X-Signature': signature,
+        };
+      }
+
+      function generateSalt() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const micro = String(
+          now.getMicroseconds ? now.getMicroseconds() : Date.now() % 1000000,
+        ).padStart(6, '0');
+        return `${y}${m}${d}${micro}`;
+      }
+
+      // =====================================================
+      //  HELPER: Fetch API wrapper
+      // =====================================================
+      async function apiGet(endpoint) {
+        const baseUrl = document.getElementById('baseUrl').value;
+        const url = `${baseUrl}${endpoint}`;
+        const headers = generateHeaders('{}');
+
+        console.log(`[GET] ${url}`);
+        console.log('[Headers]', headers);
+
+        const response = await fetch(url, { method: 'GET', headers });
+        const data = await response.json();
+        console.log('[Response]', data);
+        return data;
+      }
+
+      async function apiPost(endpoint, body) {
+        const baseUrl = document.getElementById('baseUrl').value;
+        const url = `${baseUrl}${endpoint}`;
+        const bodyStr = JSON.stringify(body);
+        const headers = generateHeaders(bodyStr);
+
+        console.log(`[POST] ${url}`);
+        console.log('[Body]', body);
+        console.log('[Headers]', headers);
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: bodyStr,
+        });
+        const data = await response.json();
+        console.log('[Response]', data);
+        return data;
+      }
+
+      // =====================================================
+      //  HELPER: Show result
+      // =====================================================
+      function showResult(elementId, data) {
+        const el = document.getElementById(elementId);
+        el.textContent = JSON.stringify(data, null, 2);
+        el.className = 'result ' + (data.status ? 'success' : 'error');
+      }
+
+      // =====================================================
+      //  TABS
+      // =====================================================
+      function showKapitaTab(tab, btn) {
+        document
+          .getElementById('kapitaListTab')
+          .classList.toggle('hidden', tab !== 'list');
+        document
+          .getElementById('kapitaAddTab')
+          .classList.toggle('hidden', tab !== 'add');
+        btn.parentElement
+          .querySelectorAll('.tab')
+          .forEach((t) => t.classList.remove('active'));
+        btn.classList.add('active');
+      }
+
+      function showRegTab(tab, btn) {
+        document
+          .getElementById('regAddTab')
+          .classList.toggle('hidden', tab !== 'add');
+        document
+          .getElementById('regCheckTab')
+          .classList.toggle('hidden', tab !== 'check');
+        document
+          .getElementById('regDetailTab')
+          .classList.toggle('hidden', tab !== 'detail');
+        btn.parentElement
+          .querySelectorAll('.tab')
+          .forEach((t) => t.classList.remove('active'));
+        btn.classList.add('active');
+      }
+
+      function showUserTab(tab, btn) {
+        document
+          .getElementById('userListTab')
+          .classList.toggle('hidden', tab !== 'list');
+        document
+          .getElementById('userAddTab')
+          .classList.toggle('hidden', tab !== 'add');
+        btn.parentElement
+          .querySelectorAll('.tab')
+          .forEach((t) => t.classList.remove('active'));
+        btn.classList.add('active');
+      }
+
+      // =====================================================
+      //  GEREJA
+      // =====================================================
+      async function getAllChurches() {
+        try {
+          const data = await apiGet('/api/churches');
+          showResult('churchResult', data);
+        } catch (err) {
+          showResult('churchResult', { status: false, message: err.message });
+        }
+      }
+
+      async function getChurchDetail() {
+        try {
+          const id = document.getElementById('churchId').value;
+          const data = await apiGet(`/api/churches/${id}`);
+          showResult('churchResult', data);
+        } catch (err) {
+          showResult('churchResult', { status: false, message: err.message });
+        }
+      }
+
+      // =====================================================
+      //  KAPITA
+      // =====================================================
+      async function getAllKapita() {
+        try {
+          const data = await apiGet('/api/kapita');
+          showResult('kapitaResult', data);
+        } catch (err) {
+          showResult('kapitaResult', { status: false, message: err.message });
+        }
+      }
+
+      async function createKapita() {
+        try {
+          const name = document.getElementById('kapitaName').value;
+          const data = await apiPost('/api/kapita', { namakapita: name });
+          showResult('kapitaResult', data);
+        } catch (err) {
+          showResult('kapitaResult', { status: false, message: err.message });
+        }
+      }
+
+      // =====================================================
+      //  REGISTRATIONS
+      // =====================================================
+      async function createRegistration() {
+        try {
+          const body = {
+            full_name: document.getElementById('regFullName').value,
+            email: document.getElementById('regEmail').value,
+            phone: document.getElementById('regPhone').value,
+            birth_date: document.getElementById('regBirthDate').value,
+            address: document.getElementById('regAddress').value,
+            church_id: parseInt(document.getElementById('regChurchId').value),
+            notes: document.getElementById('regNotes').value || null,
+          };
+          const data = await apiPost('/api/registrations', body);
+          showResult('regResult', data);
+        } catch (err) {
+          showResult('regResult', { status: false, message: err.message });
+        }
+      }
+
+      async function checkEmail() {
+        try {
+          const email = document.getElementById('checkEmail').value;
+          const data = await apiGet(`/api/registrations/check/${email}`);
+          showResult('regResult', data);
+        } catch (err) {
+          showResult('regResult', { status: false, message: err.message });
+        }
+      }
+
+      async function getRegistrationDetail() {
+        try {
+          const id = document.getElementById('regId').value;
+          const data = await apiGet(`/api/registrations/${id}`);
+          showResult('regResult', data);
+        } catch (err) {
+          showResult('regResult', { status: false, message: err.message });
+        }
+      }
+
+      // =====================================================
+      //  USERS
+      // =====================================================
+      async function getAllUsers() {
+        try {
+          const data = await apiGet('/api/users');
+          showResult('userResult', data);
+        } catch (err) {
+          showResult('userResult', { status: false, message: err.message });
+        }
+      }
+
+      async function createUser() {
+        try {
+          const body = {
+            full_name: document.getElementById('userFullName').value,
+            email: document.getElementById('userEmail').value,
+            phone: document.getElementById('userPhone').value,
+            birth_date: document.getElementById('userBirthDate').value,
+            address: document.getElementById('userAddress').value,
+            church_id: parseInt(document.getElementById('userChurchId').value),
+            ukapita: parseInt(document.getElementById('userKapitaId').value),
+            notes: document.getElementById('userNotes').value || null,
+          };
+          const data = await apiPost('/api/users', body);
+          showResult('userResult', data);
+        } catch (err) {
+          showResult('userResult', { status: false, message: err.message });
+        }
+      }
+    </script>
+  </body>
+</html>

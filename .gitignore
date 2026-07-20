@@ -1,0 +1,15 @@
+# Environtment variables / Rahasia
+.env
+.env.local
+.env.*
+
+# Python cache dan file kompilasi
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Database Lokal
+registration.db
