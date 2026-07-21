@@ -22,7 +22,7 @@ Struktur `.env.local`:
 ```python
 env = {
     "application": {
-        "secret": "GKYALSUT123",
+        "secret": "GANTI DENGAN SECRETMU //Ganti dengan secret key yang sesuai",
         "status": "DEVELOPMENT",
         "server": "LOCAL"
     },
@@ -77,7 +77,7 @@ SHA256("APIKAPITAGKYALSUT" + SECRET_KEY + SALT + DATA)
 // Package: crypto-js (https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js)
 
 function generateHeaders(body = '{}') {
-  const secret = 'GKYALSUT123'; // dari .env.local → application.secret
+  const secret = 'GANTI DENGAN SECRETMU //Ganti dengan secret key yang sesuai'; // dari .env.local → application.secret
   const salt = generateSalt();
   const raw = 'APIKAPITAGKYALSUT' + secret + salt + body;
   const signature = CryptoJS.SHA256(raw).toString();
@@ -107,7 +107,7 @@ import json
 from datetime import datetime
 
 def generate_headers(data: dict = None) -> dict:
-    secret = "GKYALSUT123"  # dari .env.local → application.secret
+    secret = "GANTI DENGAN SECRETMU //Ganti dengan secret key yang sesuai"  # dari .env.local → application.secret
     salt = datetime.now().strftime("%Y%m%d%f")
 
     if data is None:
@@ -212,7 +212,7 @@ Semua operasi **CUD** (Create, Update, Delete) pada data **Gereja**, **Kapita**,
 
 ```javascript
 function generateHeaders(body = '{}', adminId = null) {
-  const secret = 'GKYALSUT123'; // dari .env.local → application.secret
+  const secret = 'GANTI DENGAN SECRETMU //Ganti dengan secret key yang sesuai'; // dari .env.local → application.secret
   const salt = generateSalt();
   const raw = 'APIKAPITAGKYALSUT' + secret + salt + body;
   const signature = CryptoJS.SHA256(raw).toString();
@@ -260,23 +260,23 @@ Semua response menggunakan format:
 
 ### Gereja
 
-| Method | Endpoint                                          | Keterangan                    | Role Required      |
-| ------ | ------------------------------------------------- | ----------------------------- | ------------------ |
-| GET    | `/api/churches`                                   | List semua gereja + kuota     | -                  |
-| GET    | `/api/churches/{gid}`                             | Detail gereja + kuota         | -                  |
-| POST   | `/api/churches`                                   | Tambah gereja baru            | Admin / SuperAdmin |
-| PUT    | `/api/churches/{gid}`                             | Update gereja                 | Admin / SuperAdmin |
-| DELETE | `/api/churches/{gid}`                             | Hapus gereja                  | Admin / SuperAdmin |
+| Method | Endpoint              | Keterangan                | Role Required      |
+| ------ | --------------------- | ------------------------- | ------------------ |
+| GET    | `/api/churches`       | List semua gereja + kuota | -                  |
+| GET    | `/api/churches/{gid}` | Detail gereja + kuota     | -                  |
+| POST   | `/api/churches`       | Tambah gereja baru        | Admin / SuperAdmin |
+| PUT    | `/api/churches/{gid}` | Update gereja             | Admin / SuperAdmin |
+| DELETE | `/api/churches/{gid}` | Hapus gereja              | Admin / SuperAdmin |
 
 ### Gereja Kapita Quota
 
-| Method | Endpoint                                          | Keterangan                    | Role Required      |
-| ------ | ------------------------------------------------- | ----------------------------- | ------------------ |
-| GET    | `/api/churches/{gid}/kapita-quota`                | List kuota kapita gereja      | -                  |
-| POST   | `/api/churches/{gid}/kapita-quota`                | Set kuota kapita gereja       | Admin / SuperAdmin |
-| GET    | `/api/churches/{gid}/kapita-quota/{kapita_id}`    | Detail kuota kapita gereja    | -                  |
-| PUT    | `/api/churches/{gid}/kapita-quota/{kapita_id}`    | Update kuota kapita gereja    | Admin / SuperAdmin |
-| DELETE | `/api/churches/{gid}/kapita-quota/{kapita_id}`    | Hapus kuota kapita gereja     | Admin / SuperAdmin |
+| Method | Endpoint                                       | Keterangan                 | Role Required      |
+| ------ | ---------------------------------------------- | -------------------------- | ------------------ |
+| GET    | `/api/churches/{gid}/kapita-quota`             | List kuota kapita gereja   | -                  |
+| POST   | `/api/churches/{gid}/kapita-quota`             | Set kuota kapita gereja    | Admin / SuperAdmin |
+| GET    | `/api/churches/{gid}/kapita-quota/{kapita_id}` | Detail kuota kapita gereja | -                  |
+| PUT    | `/api/churches/{gid}/kapita-quota/{kapita_id}` | Update kuota kapita gereja | Admin / SuperAdmin |
+| DELETE | `/api/churches/{gid}/kapita-quota/{kapita_id}` | Hapus kuota kapita gereja  | Admin / SuperAdmin |
 
 ### Kapita
 

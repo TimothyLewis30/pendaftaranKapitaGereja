@@ -14,8 +14,10 @@ def _generateSignature(p_secret: str, p_salt: str, p_data) -> str:
     else:
         v_data = str(p_data)
 
-    v_raw = f"APIKAPITAGKYALSUT{p_secret}{p_salt}{v_data}"
-    return hashlib.sha256(v_raw.encode("utf-8")).hexdigest()
+        v_raw = f"APIKAPITAGKYALSUT{p_secret}{p_salt}{v_data}"
+        v_result = hashlib.sha256(v_raw.encode("utf-8")).hexdigest()
+        print(f"DEBUG: raw={v_raw}, signature={v_result}")
+        return v_result
 
 
 def validasi(fn):

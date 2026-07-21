@@ -20,7 +20,7 @@ Struktur `.env.local`:
 ```python
 env = {
     "application": {
-        "secret": "GKYALSUT123",
+        "secret": "GANTI DENGAN SECRETMU //Ganti dengan secret key yang sesuai",
         "status": "DEVELOPMENT",
         "server": "LOCAL"
     },
@@ -70,7 +70,7 @@ var salt = new Date()
   .toISOString()
   .replace(/[-T:\.Z]/g, '')
   .substring(0, 18);
-var secret = 'GKYALSUT123'; // dari .env.local → application.secret
+var secret = 'GANTI DENGAN SECRETMU //Ganti dengan secret key yang sesuai'; // dari .env.local → application.secret
 var raw = 'APIKAPITAGKYALSUT' + secret + salt + body;
 var signature = CryptoJS.SHA256(raw).toString();
 
@@ -84,7 +84,7 @@ var salt = new Date()
   .toISOString()
   .replace(/[-T:\.Z]/g, '')
   .substring(0, 18);
-var secret = 'GKYALSUT123'; // dari .env.local → application.secret
+var secret = 'GANTI DENGAN SECRETMU //Ganti dengan secret key yang sesuai'; // dari .env.local → application.secret
 var raw = 'APIKAPITAGKYALSUT' + secret + salt + '{}';
 var signature = CryptoJS.SHA256(raw).toString();
 
