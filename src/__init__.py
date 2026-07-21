@@ -3,17 +3,15 @@ from flask_restful import Api
 from flask_cors import CORS
 from src.utils.exceptions import ServiceException
 from src.utils import responseJson
+from src.database import close_connection
 import logging
 
-
-# Logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-8s | %(message)s",
 )
 
 
-# Setup API
 def createApp():
     app = Flask(__name__)
     app.config.from_pyfile("settings.py")
@@ -21,6 +19,7 @@ def createApp():
     CORS(app)
 
     api = Api(app)
+    app.teardown_appcontext(close_connection)
 
     from src.routes import registerRoutes
     registerRoutes(api)

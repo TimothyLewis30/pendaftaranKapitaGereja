@@ -1,6 +1,6 @@
 """
 dao/modul.py
-Data Access Object untuk semua tabel (gabungan).
+Data Access Object untuk semua tabel (PostgreSQL via psycopg2).
 """
 import logging
 from src.database import get_connection
@@ -19,10 +19,10 @@ def dao_create_admin(p_username, p_email, p_password_hash, p_role):
         v_cursor = v_conn.cursor()
         v_role = None if p_role == "NULL" else p_role
         v_cursor.execute(
-            "INSERT INTO admin (ausername, aemail, apassword, arole) VALUES (%s, %s, %s, %s)",
+            "INSERT INTO admin (ausername, aemail, apassword, arole) VALUES (%s, %s, %s, %s) RETURNING aid",
             (p_username, p_email, p_password_hash, v_role)
         )
-        v_new_id = v_cursor.lastrowid
+        v_new_id = v_cursor.fetchone()[0]
         v_conn.commit()
         return v_new_id
     except Exception as e:
@@ -30,7 +30,7 @@ def dao_create_admin(p_username, p_email, p_password_hash, p_role):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_get_all_admins():
@@ -45,7 +45,7 @@ def dao_get_all_admins():
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_get_admin_by_id(p_aid):
@@ -61,7 +61,7 @@ def dao_get_admin_by_id(p_aid):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_get_admin_by_email(p_email):
@@ -77,7 +77,7 @@ def dao_get_admin_by_email(p_email):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_get_admin_with_password_by_id(p_aid):
@@ -93,7 +93,7 @@ def dao_get_admin_with_password_by_id(p_aid):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_update_admin(p_aid, p_username, p_email, p_password_hash, p_role):
@@ -121,7 +121,7 @@ def dao_update_admin(p_aid, p_username, p_email, p_password_hash, p_role):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_delete_admin(p_aid):
@@ -137,7 +137,7 @@ def dao_delete_admin(p_aid):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -167,7 +167,7 @@ def dao_get_all_churches():
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_get_church_by_gkode(p_gkode):
@@ -183,7 +183,7 @@ def dao_get_church_by_gkode(p_gkode):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_create_church(p_gnama):
@@ -192,15 +192,16 @@ def dao_create_church(p_gnama):
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_gkode = _generate_gkode(p_gnama, v_cursor)
-        v_cursor.execute("INSERT INTO gereja (gkode, gnama) VALUES (%s, %s)", (v_gkode, p_gnama))
+        v_cursor.execute("INSERT INTO gereja (gkode, gnama) VALUES (%s, %s) RETURNING gkode", (v_gkode, p_gnama))
+        v_result = v_cursor.fetchone()[0]
         v_conn.commit()
-        return v_gkode
+        return v_result
     except Exception as e:
         logger.error("dao_create_church: %s", str(e))
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_update_church(p_gkode, p_gnama):
@@ -216,7 +217,7 @@ def dao_update_church(p_gkode, p_gnama):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_delete_church(p_gkode):
@@ -232,7 +233,7 @@ def dao_delete_church(p_gkode):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -247,16 +248,18 @@ def dao_set_church_kapita_quota(p_gkode, p_idkapita, p_kuota):
         v_cursor.execute("""
             INSERT INTO gereja_kapita (gkode, idkapita, kuota)
             VALUES (%s, %s, %s)
-            ON DUPLICATE KEY UPDATE kuota = VALUES(kuota)
+            ON CONFLICT (gkode, idkapita) DO UPDATE SET kuota = EXCLUDED.kuota
+            RETURNING gkid
         """, (p_gkode, p_idkapita, p_kuota))
+        v_result = v_cursor.fetchone()[0]
         v_conn.commit()
-        return v_cursor.lastrowid or True
+        return v_result
     except Exception as e:
         logger.error("dao_set_church_kapita_quota: %s", str(e))
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_get_church_kapita_quotas(p_gkode):
@@ -282,7 +285,7 @@ def dao_get_church_kapita_quotas(p_gkode):
             ) r ON r.church_gkode = gk.gkode AND r.kapita_id = gk.idkapita
             LEFT JOIN (
                 SELECT ugereja, ukapita, COUNT(*) AS user_count
-                FROM user
+                FROM "user"
                 GROUP BY ugereja, ukapita
             ) u ON u.ugereja = gk.gkode AND u.ukapita = gk.idkapita
             WHERE gk.gkode = %s
@@ -294,7 +297,7 @@ def dao_get_church_kapita_quotas(p_gkode):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_count_all_registrations_by_church(p_gkode):
@@ -302,10 +305,7 @@ def dao_count_all_registrations_by_church(p_gkode):
     try:
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
-        v_cursor.execute(
-            "SELECT COUNT(*) AS count FROM registrations WHERE church_gkode = %s",
-            (p_gkode,)
-        )
+        v_cursor.execute("SELECT COUNT(*) AS count FROM registrations WHERE church_gkode = %s", (p_gkode,))
         v_row = v_cursor.fetchone()
         return v_row['count'] if v_row else 0
     except Exception as e:
@@ -313,7 +313,7 @@ def dao_count_all_registrations_by_church(p_gkode):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_count_all_users_by_church(p_gkode):
@@ -321,10 +321,7 @@ def dao_count_all_users_by_church(p_gkode):
     try:
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
-        v_cursor.execute(
-            "SELECT COUNT(*) AS count FROM user WHERE ugereja = %s",
-            (p_gkode,)
-        )
+        v_cursor.execute('SELECT COUNT(*) AS count FROM "user" WHERE ugereja = %s', (p_gkode,))
         v_row = v_cursor.fetchone()
         return v_row['count'] if v_row else 0
     except Exception as e:
@@ -332,7 +329,7 @@ def dao_count_all_users_by_church(p_gkode):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_get_quota_by_church_and_kapita(p_gkode, p_idkapita):
@@ -356,7 +353,7 @@ def dao_get_quota_by_church_and_kapita(p_gkode, p_idkapita):
             ) r ON r.church_gkode = gk.gkode AND r.kapita_id = gk.idkapita
             LEFT JOIN (
                 SELECT ugereja, ukapita, COUNT(*) AS user_count
-                FROM user
+                FROM "user"
                 WHERE ugereja = %s AND ukapita = %s
             ) u ON u.ugereja = gk.gkode AND u.ukapita = gk.idkapita
             WHERE gk.gkode = %s AND gk.idkapita = %s
@@ -368,7 +365,7 @@ def dao_get_quota_by_church_and_kapita(p_gkode, p_idkapita):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_delete_church_kapita_quota(p_gkode, p_idkapita):
@@ -384,7 +381,7 @@ def dao_delete_church_kapita_quota(p_gkode, p_idkapita):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -396,8 +393,8 @@ def dao_create_kapita(p_namakapita):
     try:
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
-        v_cursor.execute("INSERT INTO kapita (namakapita) VALUES (%s)", (p_namakapita,))
-        v_new_id = v_cursor.lastrowid
+        v_cursor.execute("INSERT INTO kapita (namakapita) VALUES (%s) RETURNING idkapita", (p_namakapita,))
+        v_new_id = v_cursor.fetchone()[0]
         v_conn.commit()
         return v_new_id
     except Exception as e:
@@ -405,7 +402,7 @@ def dao_create_kapita(p_namakapita):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_get_all_kapita():
@@ -420,7 +417,7 @@ def dao_get_all_kapita():
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_get_kapita_by_id(p_idkapita):
@@ -436,7 +433,7 @@ def dao_get_kapita_by_id(p_idkapita):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_update_kapita(p_idkapita, p_namakapita):
@@ -452,7 +449,7 @@ def dao_update_kapita(p_idkapita, p_namakapita):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_delete_kapita(p_idkapita):
@@ -468,7 +465,7 @@ def dao_delete_kapita(p_idkapita):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -481,12 +478,10 @@ def dao_create_registration(p_full_name, p_email, p_phone, p_birth_date, p_addre
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
-            INSERT INTO registrations
-                (full_name, email, phone, birth_date, address, church_gkode, kapita_id, notes)
-            VALUES
-                (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO registrations (full_name, email, phone, birth_date, address, church_gkode, kapita_id, notes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
         """, (p_full_name, p_email, p_phone, p_birth_date, p_address, p_church_gkode, p_kapita_id, p_notes))
-        v_new_id = v_cursor.lastrowid
+        v_new_id = v_cursor.fetchone()[0]
         v_conn.commit()
         return v_new_id
     except Exception as e:
@@ -494,7 +489,7 @@ def dao_create_registration(p_full_name, p_email, p_phone, p_birth_date, p_addre
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_get_registration_by_id(p_reg_id):
@@ -519,7 +514,7 @@ def dao_get_registration_by_id(p_reg_id):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_get_registration_by_email(p_email):
@@ -544,7 +539,7 @@ def dao_get_registration_by_email(p_email):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_count_registrations_by_church_and_kapita(p_church_gkode, p_kapita_id):
@@ -563,7 +558,7 @@ def dao_count_registrations_by_church_and_kapita(p_church_gkode, p_kapita_id):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_update_registration(p_id, p_full_name, p_email, p_phone, p_birth_date, p_address, p_church_gkode, p_kapita_id, p_notes):
@@ -584,7 +579,7 @@ def dao_update_registration(p_id, p_full_name, p_email, p_phone, p_birth_date, p
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_delete_registration(p_id):
@@ -600,7 +595,7 @@ def dao_delete_registration(p_id):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -613,7 +608,7 @@ def dao_count_users_by_church_and_kapita(p_church_gkode, p_kapita_id):
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute(
-            "SELECT COUNT(*) as count FROM user WHERE ugereja = %s AND ukapita = %s",
+            'SELECT COUNT(*) as count FROM "user" WHERE ugereja = %s AND ukapita = %s',
             (p_church_gkode, p_kapita_id)
         )
         v_row = v_cursor.fetchone()
@@ -623,7 +618,7 @@ def dao_count_users_by_church_and_kapita(p_church_gkode, p_kapita_id):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_create_user(p_full_name, p_email, p_phone, p_birth_date, p_address, p_church_gkode, p_ukapita, p_notes):
@@ -632,12 +627,10 @@ def dao_create_user(p_full_name, p_email, p_phone, p_birth_date, p_address, p_ch
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
-            INSERT INTO user
-                (unama, uemail, uphone, ubirth_date, uaddress, ugereja, ukapita, unotes)
-            VALUES
-                (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO "user" (unama, uemail, uphone, ubirth_date, uaddress, ugereja, ukapita, unotes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING uid
         """, (p_full_name, p_email, p_phone, p_birth_date, p_address, p_church_gkode, p_ukapita, p_notes))
-        v_new_id = v_cursor.lastrowid
+        v_new_id = v_cursor.fetchone()[0]
         v_conn.commit()
         return v_new_id
     except Exception as e:
@@ -645,7 +638,7 @@ def dao_create_user(p_full_name, p_email, p_phone, p_birth_date, p_address, p_ch
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_get_all_users():
@@ -658,7 +651,7 @@ def dao_get_all_users():
                    u.ugereja, g.gkode, g.gnama AS church_name,
                    u.ukapita, k.namakapita AS kapita_name,
                    u.unotes, u.uregistered_at
-            FROM user u
+            FROM "user" u
             JOIN gereja g ON g.gkode = u.ugereja
             JOIN kapita k ON k.idkapita = u.ukapita
             ORDER BY u.unama ASC
@@ -669,7 +662,7 @@ def dao_get_all_users():
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_get_user_by_id(p_uid):
@@ -682,7 +675,7 @@ def dao_get_user_by_id(p_uid):
                    u.ugereja, g.gkode, g.gnama AS church_name,
                    u.ukapita, k.namakapita AS kapita_name,
                    u.unotes, u.uregistered_at
-            FROM user u
+            FROM "user" u
             JOIN gereja g ON g.gkode = u.ugereja
             JOIN kapita k ON k.idkapita = u.ukapita
             WHERE u.uid = %s
@@ -694,7 +687,7 @@ def dao_get_user_by_id(p_uid):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_update_user(p_uid, p_full_name, p_email, p_phone, p_birth_date, p_address, p_church_gkode, p_ukapita, p_notes):
@@ -703,7 +696,7 @@ def dao_update_user(p_uid, p_full_name, p_email, p_phone, p_birth_date, p_addres
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
-            UPDATE user SET
+            UPDATE "user" SET
                 unama = %s, uemail = %s, uphone = %s, ubirth_date = %s,
                 uaddress = %s, ugereja = %s, ukapita = %s, unotes = %s
             WHERE uid = %s
@@ -715,7 +708,7 @@ def dao_update_user(p_uid, p_full_name, p_email, p_phone, p_birth_date, p_addres
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
 
 
 def dao_delete_user(p_uid):
@@ -723,7 +716,7 @@ def dao_delete_user(p_uid):
     try:
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
-        v_cursor.execute("DELETE FROM user WHERE uid = %s", (p_uid,))
+        v_cursor.execute('DELETE FROM "user" WHERE uid = %s', (p_uid,))
         v_conn.commit()
         return v_cursor.rowcount > 0
     except Exception as e:
@@ -731,4 +724,4 @@ def dao_delete_user(p_uid):
         raise
     finally:
         if v_cursor:
-            del v_cursor
+            v_cursor.close()
