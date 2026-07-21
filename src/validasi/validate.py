@@ -7,6 +7,7 @@ import hashlib, json, pytz, traceback
 
 
 def _generateSignature(p_secret: str, p_salt: str, p_data) -> str:
+    print(f"DEBUG: p_secret={p_secret}, p_salt={p_salt}, p_data={p_data}")
     if isinstance(p_data, (dict, list)):
         v_data = json.dumps(p_data, sort_keys=True, separators=(",", ":"))
     elif isinstance(p_data, (bytes, bytearray)):
