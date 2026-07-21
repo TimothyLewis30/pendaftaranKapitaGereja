@@ -6,11 +6,19 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
-      - key: DATABASE_URL
-        sync: false
       - key: SECRET_KEY
         sync: false
       - key: APP_STATUS
         value: PRODUCTION
       - key: APP_SERVER
         value: RENDER
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: '5432'
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
