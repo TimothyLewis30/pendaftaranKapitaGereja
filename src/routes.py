@@ -275,10 +275,20 @@ class UserDetailResource(Resource):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# PING
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class PingResource(Resource):
+    def get(self):
+        return responseJson(200, True, "Server is running.", [])
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # REGISTER ROUTES
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def registerRoutes(api):
+    api.add_resource(PingResource, "/api/ping", endpoint="ping")
     api.add_resource(AdminLoginResource,                "/api/admin/login",                                                 endpoint="admin-login")
     api.add_resource(AdminListResource,                 "/api/admins",                                                      endpoint="admins")
     api.add_resource(AdminDetailResource,               "/api/admins/<int:p_aid>",                                          endpoint="admin-detail")
