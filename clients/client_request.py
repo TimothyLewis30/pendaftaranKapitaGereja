@@ -32,6 +32,7 @@ def _load_env_local(p_filename: str = ".env.local") -> dict:
 class ApiClient:
 
     def __init__(self, p_secret_key: str, p_base_url: str = None):
+        print(f"DEBUG: p_secret_key={p_secret_key}, p_base_url={p_base_url}")
         self.v_secret_key = p_secret_key
         self.v_base_url = (p_base_url or BASE_URL).rstrip("/")
         self.v_admin_id = None
@@ -46,15 +47,14 @@ class ApiClient:
         return "".join(v_chars[i] for i in v_bytes)
 
     def _generate_signature(self, p_salt: str, p_data) -> str:
-        v_body = ""
         if isinstance(p_data, (dict, list)):
-            v_body = json.dumps(p_data, sort_keys=True, separators=(",", ":"))
+            v_data = json.dumps(p_data, sort_keys=True, separators=(",", ":"))
         elif isinstance(p_data, (bytes, bytearray)):
-            v_body = p_data.decode("utf-8", errors="ignore")
-        elif p_data:
-            v_body = str(p_data)
+            v_data = p_data.decode("utf-8", errors="ignore")
+        else:
+            v_data = str(p_data)
 
-        v_raw = f"APIKAPITAGKYALSUT{self.v_secret_key}{p_salt}{v_body}"
+        v_raw = f"APIKAPITAGKYALSUT{self.v_secret_key}{p_salt}{v_data}"
         v_result = hashlib.sha256(v_raw.encode("utf-8")).hexdigest()
         print(f"DEBUG: raw={v_raw}, signature={v_result}")
         return v_result
@@ -87,7 +87,12 @@ class ApiClient:
             headers=v_headers,
             timeout=30,
         )
-        return v_resp.json()
+        try:
+            return v_resp.json()
+        except Exception:
+            return {"code": v_resp.status_code, "status": False,
+                    "message": f"Non-JSON response ({v_resp.status_code}): {v_resp.text[:500]}",
+                    "results": []}
 
     # ── Auth ──────────────────────────────────────────────────
 
@@ -264,54 +269,226 @@ class ApiClient:
         return self._request("DELETE", f"/api/users/{p_uid}")
 
 
-# ── Contoh Penggunaan ──────────────────────────────────────────
-# Endpoint publik (tidak perlu login):
-#   - get_churches, get_church, get_kapita_list, get_kapita
-#   - create_user, create_registration, check_registration
-#   - get_users, get_user, get_registration, dll.
-#
-# Endpoint admin (perlu login + set_admin):
-#   - create/update/delete church, kapita, quota
-#   - create/update/delete admin
-#   - create/update/delete registration (admin form)
 if __name__ == "__main__":
     v_env = _load_env_local()
-    v_secret = "ISI DENGAN SECRETMU"  # Ganti dengan secret key yang sesuai
+    v_secret = "GKYASLUT123"
     v_client = ApiClient(p_secret_key=v_secret)
 
-    # ── Publik: tanpa login ──────────────────────────────────
-    print("=== Daftar Gereja (publik) ===")
-    v_churches = v_client.get_churches()
-    print(json.dumps(v_churches, indent=2, ensure_ascii=False))
+    def show(p_label, p_resp):
+        print(f"\n{'='*60}")
+        print(f"  {p_label}")
+        print(f"{'='*60}")
+        print(json.dumps(p_resp, indent=2, ensure_ascii=False))
 
-    print("\n=== Daftar Kapita (publik) ===")
-    v_kapita = v_client.get_kapita_list()
-    print(json.dumps(v_kapita, indent=2, ensure_ascii=False))
+    # ═══════════════════════════════════════════════════════════
+    # 1. PUBLIK — Church
+    # ═══════════════════════════════════════════════════════════
+    v_resp = v_client.get_churches()
+    show("GET /api/churches", v_resp)
 
-    # ── Publik: daftar user ──────────────────────────────────
-    print("\n=== Daftar User (publik) ===")
-    v_user_resp = v_client.create_user(
-        p_full_name="Yohanes",
+    v_gkode = v_resp["results"][0]["id"] if v_resp.get("status") and v_resp.get("results") else None
+
+    if v_gkode:
+        v_resp = v_client.get_church(v_gkode)
+        show(f"GET /api/churches/{v_gkode}", v_resp)
+
+    # ═══════════════════════════════════════════════════════════
+    # 2. PUBLIK — Kapita
+    # ═══════════════════════════════════════════════════════════
+    v_resp = v_client.get_kapita_list()
+    show("GET /api/kapita", v_resp)
+
+    v_kapita_id = v_resp["results"][0]["idkapita"] if v_resp.get("status") and v_resp.get("results") else None
+
+    if v_kapita_id:
+        v_resp = v_client.get_kapita(v_kapita_id)
+        show(f"GET /api/kapita/{v_kapita_id}", v_resp)
+
+    # ═══════════════════════════════════════════════════════════
+    # 3. PUBLIK — User CRUD
+    # ═══════════════════════════════════════════════════════════
+    v_resp = v_client.create_user(
+        p_full_name="Yohanes Test",
         p_email="yohanes@test.com",
         p_phone="08123456789",
         p_birth_date="2000-01-15",
         p_address="Jl. Panjang No. 1",
-        p_church_gkode="GKY001",
-        p_ukapita=3,
+        p_church_gkode=v_gkode or "GKY001",
+        p_ukapita=v_kapita_id or 1,
         p_notes="Pemuda",
     )
-    print(json.dumps(v_user_resp, indent=2, ensure_ascii=False))
+    show("POST /api/users (create)", v_resp)
+    v_uid = v_resp["results"]["uid"] if v_resp.get("status") else None
 
-    # ── Admin: login dulu ───────────────────────────────────
-    print("\n=== Login Admin ===")
-    v_login_resp = v_client.login("superadmin@gereja.com", "superadmin123")
-    print(json.dumps(v_login_resp, indent=2, ensure_ascii=False))
+    v_resp = v_client.get_users()
+    show("GET /api/users", v_resp)
 
-    if v_login_resp.get("status"):
-        v_admin_id = v_login_resp["results"]["aid"]
+    if v_uid:
+        v_resp = v_client.get_user(v_uid)
+        show(f"GET /api/users/{v_uid}", v_resp)
+
+        v_resp = v_client.update_user(
+            p_uid=v_uid, p_full_name="Yohanes Updated",
+            p_email="yohanes@test.com", p_phone="08123456789",
+            p_birth_date="2000-01-15", p_address="Jl. Panjang No. 1 Updated",
+            p_church_gkode=v_gkode or "GKY001", p_ukapita=v_kapita_id or 1,
+            p_notes="Pemuda Updated",
+        )
+        show(f"PUT /api/users/{v_uid} (update)", v_resp)
+
+        v_resp = v_client.get_user(v_uid)
+        show(f"GET /api/users/{v_uid} (after update)", v_resp)
+
+    # ═══════════════════════════════════════════════════════════
+    # 4. PUBLIK — Registration CRUD
+    # ═══════════════════════════════════════════════════════════
+    v_resp = v_client.create_registration(
+        p_full_name="Yohanes Test",
+        p_email="yohanes@test.com",
+        p_phone="08123456789",
+        p_birth_date="2000-01-15",
+        p_address="Jl. Panjang No. 1",
+        p_church_gkode=v_gkode or "GKY001",
+        p_kapita_id=v_kapita_id or 1,
+        p_notes="Pendaftaran kapita",
+    )
+    show("POST /api/registrations (create)", v_resp)
+    v_reg_id = v_resp["results"]["id"] if v_resp.get("status") else None
+
+    if v_reg_id:
+        v_resp = v_client.get_registration(v_reg_id)
+        show(f"GET /api/registrations/{v_reg_id}", v_resp)
+
+    v_resp = v_client.check_registration("yohanes@test.com")
+    show("GET /api/registrations/check/yohanes@test.com", v_resp)
+
+    if v_reg_id:
+        v_resp = v_client.update_registration(
+            p_reg_id=v_reg_id, p_full_name="Yohanes Updated",
+            p_email="yohanes@test.com", p_phone="08123456789",
+            p_birth_date="2000-01-15", p_address="Jl. Panjang No. 1 Updated",
+            p_church_gkode=v_gkode or "GKY001", p_kapita_id=v_kapita_id or 1,
+            p_notes="Pendaftaran kapita updated",
+        )
+        show(f"PUT /api/registrations/{v_reg_id} (update)", v_resp)
+
+        v_resp = v_client.get_registration(v_reg_id)
+        show(f"GET /api/registrations/{v_reg_id} (after update)", v_resp)
+
+    # ═══════════════════════════════════════════════════════════
+    # 5. LOGIN ADMIN
+    # ═══════════════════════════════════════════════════════════
+    v_resp = v_client.login("superadmin@gereja.com", "superadmin123")
+    show("POST /api/admin/login", v_resp)
+
+    if not v_resp.get("status"):
+        print("\n[SKIP] Semua endpoint admin di-skip karena login gagal.")
+    else:
+        v_admin_id = v_resp["results"]["aid"]
         v_client.set_admin(v_admin_id)
 
-        # Hanya endpoint ini yang butuh admin
-        print("\n=== Buat Gereja (admin) ===")
-        v_new_church = v_client.create_church("Gereja Baru")
-        print(json.dumps(v_new_church, indent=2, ensure_ascii=False))
+        # ═══════════════════════════════════════════════════════
+        # 6. ADMIN — Admin CRUD
+        # ═══════════════════════════════════════════════════════
+        v_resp = v_client.get_admins()
+        show("GET /api/admins", v_resp)
+
+        v_resp = v_client.create_admin(
+            p_username="admin_test", p_email="admin_test@gereja.com",
+            p_password="admin123", p_role="Admin",
+        )
+        show("POST /api/admins (create)", v_resp)
+        v_new_aid = v_resp["results"]["aid"] if v_resp.get("status") else None
+
+        if v_new_aid:
+            v_resp = v_client.get_admin(v_new_aid)
+            show(f"GET /api/admins/{v_new_aid}", v_resp)
+
+            v_resp = v_client.update_admin(
+                p_admin_id=v_new_aid, p_username="admin_test_updated",
+                p_email="admin_test_updated@gereja.com",
+                p_password="admin123", p_role="Admin",
+            )
+            show(f"PUT /api/admins/{v_new_aid} (update)", v_resp)
+
+            v_resp = v_client.get_admin(v_new_aid)
+            show(f"GET /api/admins/{v_new_aid} (after update)", v_resp)
+
+            v_resp = v_client.delete_admin(v_new_aid)
+            show(f"DELETE /api/admins/{v_new_aid}", v_resp)
+
+        # ═══════════════════════════════════════════════════════
+        # 7. ADMIN — Church CRUD
+        # ═══════════════════════════════════════════════════════
+        v_resp = v_client.create_church("Gereja Test Admin")
+        show("POST /api/churches (create)", v_resp)
+        v_admin_gkode = v_resp["results"]["id"] if v_resp.get("status") else v_gkode
+
+        if v_admin_gkode:
+            v_resp = v_client.get_church(v_admin_gkode)
+            show(f"GET /api/churches/{v_admin_gkode}", v_resp)
+
+            v_resp = v_client.update_church(v_admin_gkode, "Gereja Test Updated")
+            show(f"PUT /api/churches/{v_admin_gkode} (update)", v_resp)
+
+            v_resp = v_client.get_church(v_admin_gkode)
+            show(f"GET /api/churches/{v_admin_gkode} (after update)", v_resp)
+
+        # ═══════════════════════════════════════════════════════
+        # 8. ADMIN — Kapita CRUD
+        # ═══════════════════════════════════════════════════════
+        v_resp = v_client.create_kapita("Kapita Test Admin")
+        show("POST /api/kapita (create)", v_resp)
+        v_admin_kapita_id = v_resp["results"]["idkapita"] if v_resp.get("status") else v_kapita_id
+
+        if v_admin_kapita_id:
+            v_resp = v_client.get_kapita(v_admin_kapita_id)
+            show(f"GET /api/kapita/{v_admin_kapita_id}", v_resp)
+
+            v_resp = v_client.update_kapita(v_admin_kapita_id, "Kapita Test Updated")
+            show(f"PUT /api/kapita/{v_admin_kapita_id} (update)", v_resp)
+
+            v_resp = v_client.get_kapita(v_admin_kapita_id)
+            show(f"GET /api/kapita/{v_admin_kapita_id} (after update)", v_resp)
+
+        # ═══════════════════════════════════════════════════════
+        # 9. ADMIN — Church Kapita Quota CRUD
+        # ═══════════════════════════════════════════════════════
+        if v_admin_gkode and v_admin_kapita_id:
+            v_resp = v_client.set_church_kapita_quota(v_admin_gkode, v_admin_kapita_id, 50)
+            show(f"POST /api/churches/{v_admin_gkode}/kapita-quota (set)", v_resp)
+
+            v_resp = v_client.get_church_kapita_quotas(v_admin_gkode)
+            show(f"GET /api/churches/{v_admin_gkode}/kapita-quota", v_resp)
+
+            v_resp = v_client.get_church_kapita_quota(v_admin_gkode, v_admin_kapita_id)
+            show(f"GET /api/churches/{v_admin_gkode}/kapita-quota/{v_admin_kapita_id}", v_resp)
+
+            v_resp = v_client.update_church_kapita_quota(v_admin_gkode, v_admin_kapita_id, 100)
+            show(f"PUT /api/churches/{v_admin_gkode}/kapita-quota/{v_admin_kapita_id} (update)", v_resp)
+
+            v_resp = v_client.get_church_kapita_quota(v_admin_gkode, v_admin_kapita_id)
+            show(f"GET /api/churches/{v_admin_gkode}/kapita-quota/{v_admin_kapita_id} (after update)", v_resp)
+
+        # ═══════════════════════════════════════════════════════
+        # 10. CLEANUP — Hapus semua data test (reverse order)
+        # ═══════════════════════════════════════════════════════
+        if v_reg_id:
+            v_resp = v_client.delete_registration(v_reg_id)
+            show(f"DELETE /api/registrations/{v_reg_id}", v_resp)
+
+        if v_uid:
+            v_resp = v_client.delete_user(v_uid)
+            show(f"DELETE /api/users/{v_uid}", v_resp)
+
+        if v_admin_gkode and v_admin_kapita_id:
+            v_resp = v_client.delete_church_kapita_quota(v_admin_gkode, v_admin_kapita_id)
+            show(f"DELETE /api/churches/{v_admin_gkode}/kapita-quota/{v_admin_kapita_id}", v_resp)
+
+        if v_admin_kapita_id:
+            v_resp = v_client.delete_kapita(v_admin_kapita_id)
+            show(f"DELETE /api/kapita/{v_admin_kapita_id}", v_resp)
+
+        if v_admin_gkode:
+            v_resp = v_client.delete_church(v_admin_gkode)
+            show(f"DELETE /api/churches/{v_admin_gkode}", v_resp)

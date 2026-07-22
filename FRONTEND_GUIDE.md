@@ -1,44 +1,28 @@
 # Frontend Integration Guide
 
-Panduan integrasi frontend ke Backend Registration App.
+Panduan lengkap integrasi frontend ke Backend Pendaftaran Kapita Gereja.
 
 ---
 
-## Konfigurasi
+## Daftar Isi
 
-Semua konfigurasi diambil dari file `.env.local` di root project, bukan dari environment variable.
-
-```python
-# src/settings.py
-import ast, os
-
-_env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env.local")
-with open(_env_path) as _f:
-    v_env = ast.literal_eval(_f.read().strip().removeprefix("env = "))
-```
-
-Struktur `.env.local`:
-
-```python
-env = {
-    "application": {
-        "secret": "GANTI DENGAN SECRETMU //Ganti dengan secret key yang sesuai",
-        "status": "DEVELOPMENT",
-        "server": "LOCAL"
-    },
-    "db": {
-        "host": "127.0.0.1",
-        "port": 3307,
-        "user": "root",
-        "password": "",
-        "name": "db_ls_metta"
-    }
-}
-```
+1. [Base URL](#base-url)
+2. [Konfigurasi](#konfigurasi)
+3. [Autentikasi (Signature)](#autentikasi-signature)
+4. [Role-Based Access Control](#role-based-access-control-rbac)
+5. [Format Response](#format-response)
+6. [Daftar Endpoint](#daftar-endpoint)
+7. [Contoh Lengkap](#contoh-lengkap)
 
 ---
 
 ## Base URL
+
+```
+https://pendaftarankapitagereja.onrender.com
+```
+
+Untuk development lokal:
 
 ```
 http://127.0.0.1:8080
@@ -46,174 +30,64 @@ http://127.0.0.1:8080
 
 ---
 
-## Autentikasi (Wajib di Semua Request)
+## Konfigurasi
 
-Setiap request harus mengirim 2 header tambahan:
+Semua konfigurasi diambil dari file `.env.local` di root project.
 
-| Header        | Tipe   | Keterangan                                       |
-| ------------- | ------ | ------------------------------------------------ |
-| `X-Salt`      | string | Timestamp unik per request                       |
-| `X-Signature` | string | SHA-256 hash dari kombinasi secret + salt + data |
+```python
+# src/settings.py
+SECRET_KEY = _env["application"]["secret"]
+```
 
-### Cara Generate Header
+**Anda perlu tahu SECRET_KEY** karena digunakan untuk generate signature setiap request. Nilai ini sama dengan `application.secret` di `.env.local`.
 
-**Rumus Signature:**
+---
+
+## Autentikasi (Signature)
+
+**Setiap request** ke API harus menyertakan 2 header wajib:
+
+| Header        | Tipe   | Keterangan                              |
+| ------------- | ------ | --------------------------------------- |
+| `X-Salt`      | string | Salt unik per request (16+ karakter)    |
+| `X-Signature` | string | SHA-256 hash (64 karakter hex)          |
+| `X-Admin-ID`  | string | ID admin (hanya untuk endpoint admin)   |
+
+### Rumus Signature
 
 ```
 SHA256("APIKAPITAGKYALSUT" + SECRET_KEY + SALT + DATA)
 ```
 
-| Parameter    | Keterangan                   | Nilai                                        |
-| ------------ | ---------------------------- | -------------------------------------------- |
-| `SECRET_KEY` | Secret key dari `.env.local` | `v_env["application"]["secret"]`             |
-| `SALT`       | Isi header `X-Salt`          | Format: `YYYYMMDD` + microseconds (18 digit) |
-| `DATA`       | Request body / query params  | JSON string (POST) atau `"{}"` (GET)         |
+| Parameter    | Keterangan                          |
+| ------------ | ----------------------------------- |
+| `SECRET_KEY` | Secret key dari server              |
+| `SALT`       | Nilai header `X-Salt`               |
+| `DATA`       | Request body (JSON string) atau `"{}"` untuk GET |
 
-### Contoh Implementasi
-
-**JavaScript (Browser):**
+### Cara Generate Salt
 
 ```javascript
-// Package: crypto-js (https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js)
-
-function generateHeaders(body = '{}') {
-  const secret = 'GANTI DENGAN SECRETMU //Ganti dengan secret key yang sesuai'; // dari .env.local → application.secret
-  const salt = generateSalt();
-  const raw = 'APIKAPITAGKYALSUT' + secret + salt + body;
-  const signature = CryptoJS.SHA256(raw).toString();
-
-  return {
-    'Content-Type': 'application/json',
-    'X-Salt': salt,
-    'X-Signature': signature,
-  };
-}
-
+// Random string 16 karakter
 function generateSalt() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  const micro = String(Date.now() % 1000000).padStart(6, '0');
-  return `${y}${m}${d}${micro}`;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let salt = '';
+  for (let i = 0; i < 16; i++) {
+    salt += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return salt;
 }
 ```
 
-**Python:**
-
-```python
-import hashlib
-import json
-from datetime import datetime
-
-def generate_headers(data: dict = None) -> dict:
-    secret = "GANTI DENGAN SECRETMU //Ganti dengan secret key yang sesuai"  # dari .env.local → application.secret
-    salt = datetime.now().strftime("%Y%m%d%f")
-
-    if data is None:
-        data_str = "{}"
-    else:
-        data_str = json.dumps(data, sort_keys=True, separators=(",", ":"))
-
-    raw = f"APIKAPITAGKYALSUT{secret}{salt}{data_str}"
-    signature = hashlib.sha256(raw.encode("utf-8")).hexdigest()
-
-    return {
-        "Content-Type": "application/json",
-        "X-Salt": salt,
-        "X-Signature": signature
-    }
-```
-
-### Contoh Request
-
-**GET Request:**
+### Cara Generate Signature (JavaScript)
 
 ```javascript
-const headers = generateHeaders('{}'); // GET pakai "{}"
+// Menggunakan crypto-js: https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js
 
-fetch('http://127.0.0.1:8080/api/churches', {
-  method: 'GET',
-  headers: headers,
-})
-  .then((res) => res.json())
-  .then((data) => console.log(data));
-```
-
-**POST Request:**
-
-```javascript
-const body = {
-  full_name: 'Budi Santoso',
-  email: 'budi@email.com',
-  phone: '08123456789',
-  birth_date: '1995-08-17',
-  address: 'Jl. Merdeka No. 1',
-  church_id: 1,
-  kapita_id: 1,
-  notes: 'Saya tertarik dengan pelayanan musik.',
-};
-
-const headers = generateHeaders(JSON.stringify(body)); // POST pakai body
-
-fetch('http://127.0.0.1:8080/api/registrations', {
-  method: 'POST',
-  headers: headers,
-  body: JSON.stringify(body),
-})
-  .then((res) => res.json())
-  .then((data) => console.log(data));
-```
-
-### Error Autentikasi
-
-| Kode  | Keterangan                                       |
-| ----- | ------------------------------------------------ |
-| `401` | Header `X-Salt` atau `X-Signature` tidak dikirim |
-| `401` | Signature tidak cocok (data tidak sesuai)        |
-
-Response error:
-
-```json
-{
-  "code": 401,
-  "status": false,
-  "message": "Unauthorized: Invalid or missing request API key",
-  "results": []
-}
-```
-
----
-
-## Role-Based Access Control (RBAC)
-
-Semua operasi **CUD** (Create, Update, Delete) pada data **Gereja**, **Kapita**, dan **Admin** memerlukan header tambahan:
-
-| Header       | Tipe   | Keterangan                         |
-| ------------ | ------ | ---------------------------------- |
-| `X-Admin-ID` | string | ID admin yang sedang login (angka) |
-
-### Daftar Role
-
-| Role         | Keterangan                                                |
-| ------------ | --------------------------------------------------------- |
-| `SuperAdmin` | Boleh semua operasi: CRUD Gereja, CRUD Kapita, CRUD Admin |
-| `Admin`      | Boleh CRUD Gereja dan CRUD Kapita                         |
-| `NULL`       | Tidak boleh operasi CUD (hanya bisa login)                |
-
-### Alur Autentikasi Admin
-
-1. Login melalui `POST /api/admin/login` → dapatkan `aid` dari response.
-2. Simpan `aid` di client (localStorage / state).
-3. Kirim header `X-Admin-ID: {aid}` pada setiap request CUD.
-4. Operasi **GET** tetap bisa diakses tanpa `X-Admin-ID`.
-
-### Contoh Header dengan X-Admin-ID
-
-```javascript
-function generateHeaders(body = '{}', adminId = null) {
-  const secret = 'GANTI DENGAN SECRETMU //Ganti dengan secret key yang sesuai'; // dari .env.local → application.secret
+function generateHeaders(data = null, adminId = null) {
+  const secret = 'edit this'; // SECRET_KEY dari server
   const salt = generateSalt();
+  const body = data ? JSON.stringify(data) : '{}';
   const raw = 'APIKAPITAGKYALSUT' + secret + salt + body;
   const signature = CryptoJS.SHA256(raw).toString();
 
@@ -224,24 +98,66 @@ function generateHeaders(body = '{}', adminId = null) {
   };
 
   if (adminId) {
-    headers['X-Admin-ID'] = adminId;
+    headers['X-Admin-ID'] = String(adminId);
   }
 
   return headers;
 }
 ```
 
-### Error Role
+### Cara Generate Signature (Python)
 
-| Kode  | Keterangan                                       |
-| ----- | ------------------------------------------------ |
-| `403` | Header `X-Admin-ID` tidak dikirim                |
-| `403` | Role NULL (tidak punya akses)                    |
-| `403` | Role tidak sesuai (misal: Admin coba CRUD Admin) |
+```python
+import hashlib, json, random, string
+
+def generate_headers(data=None, admin_id=None):
+    secret = "edit this"  # SECRET_KEY dari server
+    salt = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+    body = json.dumps(data, sort_keys=True, separators=(",", ":")) if data else "{}"
+    raw = f"APIKAPITAGKYALSUT{secret}{salt}{body}"
+    signature = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Salt": salt,
+        "X-Signature": signature,
+    }
+    if admin_id:
+        headers["X-Admin-ID"] = str(admin_id)
+    return headers
+```
+
+### Error Autentikasi
+
+| Kode  | Penyebab                                    |
+| ----- | ------------------------------------------- |
+| `401` | Header `X-Salt` atau `X-Signature` kosong   |
+| `401` | Signature tidak cocok (salah secret/data)   |
 
 ---
 
-## Format Response Standar
+## Role-Based Access Control (RBAC)
+
+### Daftar Role
+
+| Role         | Akses                                        |
+| ------------ | -------------------------------------------- |
+| `SuperAdmin` | CRUD Gereja, CRUD Kapita, CRUD Admin, CRUD Quota |
+| `Admin`      | CRUD Gereja, CRUD Kapita, CRUD Quota         |
+| `NULL`       | Tidak bisa CUD (hanya login)                 |
+
+### Alur Login Admin
+
+```
+1. POST /api/admin/login  →  dapatkan "aid" dari response
+2. Simpan "aid" di client (localStorage / state)
+3. Setiap request CUD, kirim header "X-Admin-ID: {aid}"
+4. GET tidak butuh X-Admin-ID
+```
+
+---
+
+## Format Response
 
 Semua response menggunakan format:
 
@@ -256,110 +172,203 @@ Semua response menggunakan format:
 
 ---
 
-## Endpoint List
+## Daftar Endpoint
 
-### Gereja
+### PUBLIK (Tidak Butuh Login)
 
-| Method | Endpoint              | Keterangan                | Role Required      |
-| ------ | --------------------- | ------------------------- | ------------------ |
-| GET    | `/api/churches`       | List semua gereja + kuota | -                  |
-| GET    | `/api/churches/{gid}` | Detail gereja + kuota     | -                  |
-| POST   | `/api/churches`       | Tambah gereja baru        | Admin / SuperAdmin |
-| PUT    | `/api/churches/{gid}` | Update gereja             | Admin / SuperAdmin |
-| DELETE | `/api/churches/{gid}` | Hapus gereja              | Admin / SuperAdmin |
+#### Gereja
 
-### Gereja Kapita Quota
+| Method | Endpoint                           | Keterangan                      |
+| ------ | ---------------------------------- | ------------------------------- |
+| GET    | `/api/churches`                    | List semua gereja + kuota       |
+| GET    | `/api/churches/{gkode}`            | Detail gereja + kuota           |
 
-| Method | Endpoint                                       | Keterangan                 | Role Required      |
-| ------ | ---------------------------------------------- | -------------------------- | ------------------ |
-| GET    | `/api/churches/{gid}/kapita-quota`             | List kuota kapita gereja   | -                  |
-| POST   | `/api/churches/{gid}/kapita-quota`             | Set kuota kapita gereja    | Admin / SuperAdmin |
-| GET    | `/api/churches/{gid}/kapita-quota/{kapita_id}` | Detail kuota kapita gereja | -                  |
-| PUT    | `/api/churches/{gid}/kapita-quota/{kapita_id}` | Update kuota kapita gereja | Admin / SuperAdmin |
-| DELETE | `/api/churches/{gid}/kapita-quota/{kapita_id}` | Hapus kuota kapita gereja  | Admin / SuperAdmin |
+#### Kapita
 
-### Kapita
+| Method | Endpoint                           | Keterangan                      |
+| ------ | ---------------------------------- | ------------------------------- |
+| GET    | `/api/kapita`                      | List semua kapita               |
+| GET    | `/api/kapita/{idkapita}`           | Detail kapita                   |
 
-| Method | Endpoint                 | Keterangan         | Role Required      |
-| ------ | ------------------------ | ------------------ | ------------------ |
-| GET    | `/api/kapita`            | List semua kapita  | -                  |
-| GET    | `/api/kapita/{idkapita}` | Detail kapita      | -                  |
-| POST   | `/api/kapita`            | Tambah kapita baru | Admin / SuperAdmin |
-| PUT    | `/api/kapita/{idkapita}` | Update kapita      | Admin / SuperAdmin |
-| DELETE | `/api/kapita/{idkapita}` | Hapus kapita       | Admin / SuperAdmin |
+#### User (Pendaftaran Mandiri)
 
----
+| Method | Endpoint                           | Keterangan                      |
+| ------ | ---------------------------------- | ------------------------------- |
+| POST   | `/api/users`                       | Daftar user baru                |
+| GET    | `/api/users`                       | List semua user                 |
+| GET    | `/api/users/{uid}`                 | Detail user                     |
+| PUT    | `/api/users/{uid}`                 | Update user                     |
+| DELETE | `/api/users/{uid}`                 | Hapus user                      |
 
-### Registrations
+#### Registrasi (Admin Form)
 
-| Method | Endpoint                           | Keterangan          |
-| ------ | ---------------------------------- | ------------------- |
-| POST   | `/api/registrations`               | Daftar baru         |
-| GET    | `/api/registrations/check/{email}` | Cek email terdaftar |
-| GET    | `/api/registrations/{id}`          | Detail pendaftaran  |
-| PUT    | `/api/registrations/{id}`          | Update pendaftaran  |
-| DELETE | `/api/registrations/{id}`          | Hapus pendaftaran   |
+| Method | Endpoint                           | Keterangan                      |
+| ------ | ---------------------------------- | ------------------------------- |
+| POST   | `/api/registrations`               | Buat pendaftaran baru           |
+| GET    | `/api/registrations/{id}`          | Detail pendaftaran              |
+| PUT    | `/api/registrations/{id}`          | Update pendaftaran              |
+| DELETE | `/api/registrations/{id}`          | Hapus pendaftaran               |
+| GET    | `/api/registrations/check/{email}` | Cek apakah email sudah terdaftar|
 
 ---
 
-### Users
+### ADMIN (Butuh Login + X-Admin-ID)
 
-| Method | Endpoint           | Keterangan       |
-| ------ | ------------------ | ---------------- |
-| GET    | `/api/users`       | List semua user  |
-| GET    | `/api/users/{uid}` | Detail user      |
-| POST   | `/api/users`       | Tambah user baru |
-| PUT    | `/api/users/{uid}` | Update user      |
-| DELETE | `/api/users/{uid}` | Hapus user       |
+#### Auth
+
+| Method | Endpoint                           | Keterangan                      | Role       |
+| ------ | ---------------------------------- | ------------------------------- | ---------- |
+| POST   | `/api/admin/login`                 | Login admin                     | -          |
+
+#### Admin Management (Hanya SuperAdmin)
+
+| Method | Endpoint                           | Keterangan                      | Role       |
+| ------ | ---------------------------------- | ------------------------------- | ---------- |
+| GET    | `/api/admins`                      | List semua admin                | SuperAdmin |
+| GET    | `/api/admins/{aid}`                | Detail admin                    | SuperAdmin |
+| POST   | `/api/admins`                      | Tambah admin baru               | SuperAdmin |
+| PUT    | `/api/admins/{aid}`                | Update admin                    | SuperAdmin |
+| DELETE | `/api/admins/{aid}`                | Hapus admin                     | SuperAdmin |
+
+#### Gereja (Admin / SuperAdmin)
+
+| Method | Endpoint                           | Keterangan                      | Role             |
+| ------ | ---------------------------------- | ------------------------------- | ---------------- |
+| POST   | `/api/churches`                    | Tambah gereja baru              | Admin/SuperAdmin |
+| PUT    | `/api/churches/{gkode}`            | Update gereja                   | Admin/SuperAdmin |
+| DELETE | `/api/churches/{gkode}`            | Hapus gereja                    | Admin/SuperAdmin |
+
+#### Quota Kapita per Gereja (Admin / SuperAdmin)
+
+| Method | Endpoint                                              | Keterangan                   | Role             |
+| ------ | ----------------------------------------------------- | ---------------------------- | ---------------- |
+| GET    | `/api/churches/{gkode}/kapita-quota`                  | List kuota                   | -                |
+| GET    | `/api/churches/{gkode}/kapita-quota/{idkapita}`       | Detail kuota                 | -                |
+| POST   | `/api/churches/{gkode}/kapita-quota`                  | Set kuota baru               | Admin/SuperAdmin |
+| PUT    | `/api/churches/{gkode}/kapita-quota/{idkapita}`       | Update kuota                 | Admin/SuperAdmin |
+| DELETE | `/api/churches/{gkode}/kapita-quota/{idkapita}`       | Hapus kuota                  | Admin/SuperAdmin |
+
+#### Kapita (Admin / SuperAdmin)
+
+| Method | Endpoint                           | Keterangan                      | Role             |
+| ------ | ---------------------------------- | ------------------------------- | ---------------- |
+| POST   | `/api/kapita`                      | Tambah kapita baru              | Admin/SuperAdmin |
+| PUT    | `/api/kapita/{idkapita}`           | Update kapita                   | Admin/SuperAdmin |
+| DELETE | `/api/kapita/{idkapita}`           | Hapus kapita                    | Admin/SuperAdmin |
 
 ---
 
-### Admin
+## Contoh Lengkap
 
-| Method | Endpoint            | Keterangan        | Role Required |
-| ------ | ------------------- | ----------------- | ------------- |
-| POST   | `/api/admin/login`  | Login admin       | -             |
-| GET    | `/api/admins`       | List semua admin  | SuperAdmin    |
-| GET    | `/api/admins/{aid}` | Detail admin      | SuperAdmin    |
-| POST   | `/api/admins`       | Tambah admin baru | SuperAdmin    |
-| PUT    | `/api/admins/{aid}` | Update admin      | SuperAdmin    |
-| DELETE | `/api/admins/{aid}` | Hapus admin       | SuperAdmin    |
+### 1. GET (Tanpa Login)
 
-#### Login Admin
+```javascript
+// Ambil daftar gereja
+const headers = generateHeaders(); // data kosong = "{}"
+const res = await fetch('https://pendaftarankapitagereja.onrender.com/api/churches', {
+  method: 'GET',
+  headers: headers,
+});
+const data = await res.json();
+console.log(data);
+```
+
+### 2. POST User (Tanpa Login)
+
+```javascript
+const body = {
+  full_name: 'Budi Santoso',
+  email: 'budi@email.com',
+  phone: '08123456789',
+  birth_date: '1995-08-17',
+  address: 'Jl. Merdeka No. 1, Jakarta',
+  church_gkode: 'GKY001',
+  ukapita: 1,
+  notes: 'Pemuda',
+};
+const headers = generateHeaders(body);
+const res = await fetch('https://pendaftarankapitagereja.onrender.com/api/users', {
+  method: 'POST',
+  headers: headers,
+  body: JSON.stringify(body),
+});
+const data = await res.json();
+console.log(data);
+```
+
+### 3. Login Admin
 
 ```javascript
 const loginBody = {
   email: 'superadmin@gereja.com',
   password: 'superadmin123',
 };
-
-const headers = generateHeaders(JSON.stringify(loginBody));
-
-fetch('http://127.0.0.1:8080/api/admin/login', {
+const headers = generateHeaders(loginBody);
+const res = await fetch('https://pendaftarankapitagereja.onrender.com/api/admin/login', {
   method: 'POST',
   headers: headers,
   body: JSON.stringify(loginBody),
-})
-  .then((res) => res.json())
-  .then((data) => {
-    // Simpan aid dari response
-    const adminId = data.results.aid;
-    localStorage.setItem('admin_id', adminId);
-  });
+});
+const data = await res.json();
+
+if (data.status) {
+  const adminId = data.results.aid;
+  localStorage.setItem('admin_id', adminId);
+  console.log('Login berhasil, admin_id:', adminId);
+}
 ```
 
-#### Request dengan X-Admin-ID
+### 4. POST Tambah Kapita (Butuh Admin Login)
 
 ```javascript
 const adminId = localStorage.getItem('admin_id');
 const body = { namakapita: 'Kapita Baru' };
-const headers = generateHeaders(JSON.stringify(body), adminId);
+const headers = generateHeaders(body, adminId);
 
-fetch('http://127.0.0.1:8080/api/kapita', {
+const res = await fetch('https://pendaftarankapitagereja.onrender.com/api/kapita', {
   method: 'POST',
   headers: headers,
   body: JSON.stringify(body),
-})
-  .then((res) => res.json())
-  .then((data) => console.log(data));
+});
+const data = await res.json();
+console.log(data);
 ```
+
+---
+
+## Field Reference
+
+### User / Registration
+
+| Field         | Tipe   | Keterangan                    |
+| ------------- | ------ | ----------------------------- |
+| `full_name`   | string | Nama lengkap (min 3, max 100) |
+| `email`       | string | Email valid                   |
+| `phone`       | string | Nomor HP (min 8, max 20)     |
+| `birth_date`  | string | Format: `YYYY-MM-DD`          |
+| `address`     | string | Alamat (min 5 karakter)       |
+| `church_gkode`| string | Kode gereja (dari GET churches)|
+| `ukapita`     | int    | ID kapita (dari GET kapita)   |
+| `kapita_id`   | int    | ID kapita (untuk registration)|
+| `notes`       | string | Catatan (opsional)            |
+
+### Church
+
+| Field   | Tipe   | Keterangan                  |
+| ------- | ------ | --------------------------- |
+| `gkode` | string | Kode gereja (auto-generated)|
+| `name`  | string | Nama gereja                 |
+
+### Kapita
+
+| Field        | Tipe   | Keterangan                  |
+| ------------ | ------ | --------------------------- |
+| `idkapita`   | int    | ID kapita (auto-generated)  |
+| `namakapita` | string | Nama kapita                 |
+
+### Quota
+
+| Field      | Tipe   | Keterangan                  |
+| ---------- | ------ | --------------------------- |
+| `kapita_id`| int    | ID kapita                   |
+| `kuota`    | int    | Jumlah kuota                |

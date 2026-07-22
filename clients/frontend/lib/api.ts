@@ -1,5 +1,5 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://pendaftarankapitagereja.onrender.com";
-const SECRET_KEY = process.env.NEXT_PUBLIC_API_SECRET || "ISI DENGAN SECRETMU"; // Ganti dengan secret key yang sesuai
+const SECRET_KEY = process.env.NEXT_PUBLIC_API_SECRET || "SecretKeyForSignature";
 
 function generateSalt(length = 16): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
