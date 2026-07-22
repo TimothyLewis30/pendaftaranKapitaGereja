@@ -34,7 +34,7 @@ def ctrl_admin_login(p_email, p_password):
     if not v_admin:
         raise ServiceException(status_code=401, detail="Email atau password salah.")
     if not check_password_hash(v_admin["apassword"], p_password):
-        raise ServiceException(status_code=401, detail="Email atau password salah.")
+        raise ServiceException(status_code=401, detail="Email atau password salah PASSWORD GTW KINK.")
     return {"aid": v_admin["aid"], "username": v_admin["ausername"], "email": v_admin["aemail"], "role": v_admin["arole"]}
 
 

@@ -45,17 +45,21 @@ def seed_superadmin():
         )
     v_cursor = v_conn.cursor()
 
-    v_cursor.execute('SELECT COUNT(*) AS cnt FROM admin')
-    v_row = v_cursor.fetchone()
+    v_cursor.execute('SELECT aid, apassword FROM admin WHERE aemail = %s', ("superadmin@gereja.com",))
+    v_admin = v_cursor.fetchone()
+    v_hash = generate_password_hash("superadmin123")
 
-    if v_row["cnt"] == 0:
-        v_hash = generate_password_hash("superadmin123")
+    if not v_admin:
         v_cursor.execute(
             'INSERT INTO admin (ausername, aemail, apassword, arole) VALUES (%s, %s, %s, %s)',
             ("superadmin", "superadmin@gereja.com", v_hash, "SuperAdmin")
         )
         v_conn.commit()
         print("[DB] SuperAdmin default dibuat: superadmin@gereja.com / superadmin123")
+    elif not v_admin["apassword"].startswith("pbkdf2:"):
+        v_cursor.execute('UPDATE admin SET apassword = %s WHERE aid = %s', (v_hash, v_admin["aid"]))
+        v_conn.commit()
+        print("[DB] SuperAdmin password di-hash ulang: superadmin@gereja.com / superadmin123")
 
     v_cursor.close()
     v_conn.close()
