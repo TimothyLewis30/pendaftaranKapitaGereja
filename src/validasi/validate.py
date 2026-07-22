@@ -48,6 +48,8 @@ def validasi(fn):
 
         try:
             v_response = fn(*args, **kwargs)
+        except ServiceException:
+            raise
         except Exception as e:
             traceback.print_exc()
             raise ServiceException(

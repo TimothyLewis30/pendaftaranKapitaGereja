@@ -350,11 +350,13 @@ def dao_get_quota_by_church_and_kapita(p_gkode, p_idkapita):
                 SELECT church_gkode, kapita_id, COUNT(*) AS reg_count
                 FROM registrations
                 WHERE church_gkode = %s AND kapita_id = %s
+                GROUP BY church_gkode, kapita_id
             ) r ON r.church_gkode = gk.gkode AND r.kapita_id = gk.idkapita
             LEFT JOIN (
                 SELECT ugereja, ukapita, COUNT(*) AS user_count
                 FROM users
                 WHERE ugereja = %s AND ukapita = %s
+                GROUP BY ugereja, ukapita
             ) u ON u.ugereja = gk.gkode AND u.ukapita = gk.idkapita
             WHERE gk.gkode = %s AND gk.idkapita = %s
         """, (p_gkode, p_idkapita, p_gkode, p_idkapita, p_gkode, p_idkapita))
