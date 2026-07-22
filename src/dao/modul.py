@@ -22,7 +22,7 @@ def dao_create_admin(p_username, p_email, p_password_hash, p_role):
             "INSERT INTO admin (ausername, aemail, apassword, arole) VALUES (%s, %s, %s, %s) RETURNING aid",
             (p_username, p_email, p_password_hash, v_role)
         )
-        v_new_id = v_cursor.fetchone()[0]
+        v_new_id = v_cursor.fetchone()["aid"]
         v_conn.commit()
         return v_new_id
     except Exception as e:
@@ -193,7 +193,7 @@ def dao_create_church(p_gnama):
         v_cursor = v_conn.cursor()
         v_gkode = _generate_gkode(p_gnama, v_cursor)
         v_cursor.execute("INSERT INTO gereja (gkode, gnama) VALUES (%s, %s) RETURNING gkode", (v_gkode, p_gnama))
-        v_result = v_cursor.fetchone()[0]
+        v_result = v_cursor.fetchone()["gkode"]
         v_conn.commit()
         return v_result
     except Exception as e:
@@ -251,7 +251,7 @@ def dao_set_church_kapita_quota(p_gkode, p_idkapita, p_kuota):
             ON CONFLICT (gkode, idkapita) DO UPDATE SET kuota = EXCLUDED.kuota
             RETURNING gkid
         """, (p_gkode, p_idkapita, p_kuota))
-        v_result = v_cursor.fetchone()[0]
+        v_result = v_cursor.fetchone()["gkid"]
         v_conn.commit()
         return v_result
     except Exception as e:
@@ -396,7 +396,7 @@ def dao_create_kapita(p_namakapita):
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("INSERT INTO kapita (namakapita) VALUES (%s) RETURNING idkapita", (p_namakapita,))
-        v_new_id = v_cursor.fetchone()[0]
+        v_new_id = v_cursor.fetchone()["idkapita"]
         v_conn.commit()
         return v_new_id
     except Exception as e:
@@ -483,7 +483,7 @@ def dao_create_registration(p_full_name, p_email, p_phone, p_birth_date, p_addre
             INSERT INTO registrations (full_name, email, phone, birth_date, address, church_gkode, kapita_id, notes)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
         """, (p_full_name, p_email, p_phone, p_birth_date, p_address, p_church_gkode, p_kapita_id, p_notes))
-        v_new_id = v_cursor.fetchone()[0]
+        v_new_id = v_cursor.fetchone()["id"]
         v_conn.commit()
         return v_new_id
     except Exception as e:
@@ -632,7 +632,7 @@ def dao_create_user(p_full_name, p_email, p_phone, p_birth_date, p_address, p_ch
             INSERT INTO users (unama, uemail, uphone, ubirth_date, uaddress, ugereja, ukapita, unotes)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING uid
         """, (p_full_name, p_email, p_phone, p_birth_date, p_address, p_church_gkode, p_ukapita, p_notes))
-        v_new_id = v_cursor.fetchone()[0]
+        v_new_id = v_cursor.fetchone()["uid"]
         v_conn.commit()
         return v_new_id
     except Exception as e:
