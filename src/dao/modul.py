@@ -274,20 +274,19 @@ def dao_get_church_kapita_quotas(p_gkode):
                 gk.idkapita    AS idkapita,
                 k.namakapita   AS kapita_name,
                 gk.kuota       AS kuota,
-                COALESCE(r.reg_count, 0) + COALESCE(u.user_count, 0) AS registered,
-                gk.kuota - COALESCE(r.reg_count, 0) - COALESCE(u.user_count, 0) AS quota_left
+                COALESCE(r.reg_count, 0) AS registered,
+                gk.kuota - COALESCE(r.reg_count, 0) AS quota_left
             FROM gereja_kapita gk
             JOIN kapita k ON k.idkapita = gk.idkapita
             LEFT JOIN (
-                SELECT church_gkode, kapita_id, COUNT(*) AS reg_count
-                FROM registrations
-                GROUP BY church_gkode, kapita_id
-            ) r ON r.church_gkode = gk.gkode AND r.kapita_id = gk.idkapita
-            LEFT JOIN (
-                SELECT ugereja, ukapita, COUNT(*) AS user_count
-                FROM users
-                GROUP BY ugereja, ukapita
-            ) u ON u.ugereja = gk.gkode AND u.ukapita = gk.idkapita
+                SELECT gkode, idkapita, COUNT(*) AS reg_count
+                FROM (
+                    SELECT church_gkode AS gkode, kapita_id_sesi_1 AS idkapita FROM registrations
+                    UNION ALL
+                    SELECT church_gkode AS gkode, kapita_id_sesi_2 AS idkapita FROM registrations
+                ) expanded
+                GROUP BY gkode, idkapita
+            ) r ON r.gkode = gk.gkode AND r.idkapita = gk.idkapita
             WHERE gk.gkode = %s
             ORDER BY k.namakapita ASC
         """, (p_gkode,))
@@ -343,21 +342,19 @@ def dao_get_quota_by_church_and_kapita(p_gkode, p_idkapita):
                 gk.gkode       AS gkode,
                 gk.idkapita    AS idkapita,
                 gk.kuota       AS kuota,
-                COALESCE(r.reg_count, 0) + COALESCE(u.user_count, 0) AS registered,
-                gk.kuota - COALESCE(r.reg_count, 0) - COALESCE(u.user_count, 0) AS quota_left
+                COALESCE(r.reg_count, 0) AS registered,
+                gk.kuota - COALESCE(r.reg_count, 0) AS quota_left
             FROM gereja_kapita gk
             LEFT JOIN (
-                SELECT church_gkode, kapita_id, COUNT(*) AS reg_count
-                FROM registrations
-                WHERE church_gkode = %s AND kapita_id = %s
-                GROUP BY church_gkode, kapita_id
-            ) r ON r.church_gkode = gk.gkode AND r.kapita_id = gk.idkapita
-            LEFT JOIN (
-                SELECT ugereja, ukapita, COUNT(*) AS user_count
-                FROM users
-                WHERE ugereja = %s AND ukapita = %s
-                GROUP BY ugereja, ukapita
-            ) u ON u.ugereja = gk.gkode AND u.ukapita = gk.idkapita
+                SELECT gkode, idkapita, COUNT(*) AS reg_count
+                FROM (
+                    SELECT church_gkode AS gkode, kapita_id_sesi_1 AS idkapita FROM registrations
+                    UNION ALL
+                    SELECT church_gkode AS gkode, kapita_id_sesi_2 AS idkapita FROM registrations
+                ) expanded
+                WHERE gkode = %s AND idkapita = %s
+                GROUP BY gkode, idkapita
+            ) r ON r.gkode = gk.gkode AND r.idkapita = gk.idkapita
             WHERE gk.gkode = %s AND gk.idkapita = %s
         """, (p_gkode, p_idkapita, p_gkode, p_idkapita, p_gkode, p_idkapita))
         v_row = v_cursor.fetchone()
@@ -474,15 +471,15 @@ def dao_delete_kapita(p_idkapita):
 # REGISTRATIONS DAO
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def dao_create_registration(p_full_name, p_email, p_phone, p_birth_date, p_address, p_church_gkode, p_kapita_id, p_notes):
+def dao_create_registration(p_full_name, p_email, p_phone, p_church_gkode, p_kapita_id_sesi_1, p_kapita_id_sesi_2):
     v_cursor = None
     try:
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
-            INSERT INTO registrations (full_name, email, phone, birth_date, address, church_gkode, kapita_id, notes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
-        """, (p_full_name, p_email, p_phone, p_birth_date, p_address, p_church_gkode, p_kapita_id, p_notes))
+            INSERT INTO registrations (full_name, email, phone, church_gkode, kapita_id_sesi_1, kapita_id_sesi_2)
+            VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+        """, (p_full_name, p_email, p_phone, p_church_gkode, p_kapita_id_sesi_1, p_kapita_id_sesi_2))
         v_new_id = v_cursor.fetchone()["id"]
         v_conn.commit()
         return v_new_id
@@ -500,13 +497,15 @@ def dao_get_registration_by_id(p_reg_id):
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
-            SELECT r.id, r.full_name, r.email, r.phone, r.birth_date, r.address,
+            SELECT r.id, r.full_name, r.email, r.phone,
                    r.church_gkode, g.gkode, g.gnama AS church_name,
-                   r.kapita_id, k.namakapita AS kapita_name,
-                   r.notes, r.registered_at
+                   r.kapita_id_sesi_1, k1.namakapita AS kapita_name_sesi_1,
+                   r.kapita_id_sesi_2, k2.namakapita AS kapita_name_sesi_2,
+                   r.registered_at
             FROM registrations r
             JOIN gereja g ON g.gkode = r.church_gkode
-            JOIN kapita k ON k.idkapita = r.kapita_id
+            JOIN kapita k1 ON k1.idkapita = r.kapita_id_sesi_1
+            JOIN kapita k2 ON k2.idkapita = r.kapita_id_sesi_2
             WHERE r.id = %s
         """, (p_reg_id,))
         v_row = v_cursor.fetchone()
@@ -525,13 +524,15 @@ def dao_get_registration_by_email(p_email):
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
-            SELECT r.id, r.full_name, r.email, r.phone, r.birth_date, r.address,
+            SELECT r.id, r.full_name, r.email, r.phone,
                    r.church_gkode, g.gkode, g.gnama AS church_name,
-                   r.kapita_id, k.namakapita AS kapita_name,
-                   r.notes, r.registered_at
+                   r.kapita_id_sesi_1, k1.namakapita AS kapita_name_sesi_1,
+                   r.kapita_id_sesi_2, k2.namakapita AS kapita_name_sesi_2,
+                   r.registered_at
             FROM registrations r
             JOIN gereja g ON g.gkode = r.church_gkode
-            JOIN kapita k ON k.idkapita = r.kapita_id
+            JOIN kapita k1 ON k1.idkapita = r.kapita_id_sesi_1
+            JOIN kapita k2 ON k2.idkapita = r.kapita_id_sesi_2
             WHERE r.email = %s
         """, (p_email,))
         v_row = v_cursor.fetchone()
@@ -549,10 +550,10 @@ def dao_count_registrations_by_church_and_kapita(p_church_gkode, p_kapita_id):
     try:
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
-        v_cursor.execute(
-            "SELECT COUNT(*) as count FROM registrations WHERE church_gkode = %s AND kapita_id = %s",
-            (p_church_gkode, p_kapita_id)
-        )
+        v_cursor.execute("""
+            SELECT COUNT(*) as count FROM registrations
+            WHERE church_gkode = %s AND (kapita_id_sesi_1 = %s OR kapita_id_sesi_2 = %s)
+        """, (p_church_gkode, p_kapita_id, p_kapita_id))
         v_row = v_cursor.fetchone()
         return v_row['count'] if v_row else 0
     except Exception as e:
@@ -563,17 +564,17 @@ def dao_count_registrations_by_church_and_kapita(p_church_gkode, p_kapita_id):
             v_cursor.close()
 
 
-def dao_update_registration(p_id, p_full_name, p_email, p_phone, p_birth_date, p_address, p_church_gkode, p_kapita_id, p_notes):
+def dao_update_registration(p_id, p_full_name, p_email, p_phone, p_church_gkode, p_kapita_id_sesi_1, p_kapita_id_sesi_2):
     v_cursor = None
     try:
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
             UPDATE registrations SET
-                full_name = %s, email = %s, phone = %s, birth_date = %s,
-                address = %s, church_gkode = %s, kapita_id = %s, notes = %s
+                full_name = %s, email = %s, phone = %s,
+                church_gkode = %s, kapita_id_sesi_1 = %s, kapita_id_sesi_2 = %s
             WHERE id = %s
-        """, (p_full_name, p_email, p_phone, p_birth_date, p_address, p_church_gkode, p_kapita_id, p_notes, p_id))
+        """, (p_full_name, p_email, p_phone, p_church_gkode, p_kapita_id_sesi_1, p_kapita_id_sesi_2, p_id))
         v_conn.commit()
         return v_cursor.rowcount > 0
     except Exception as e:
@@ -609,10 +610,10 @@ def dao_count_users_by_church_and_kapita(p_church_gkode, p_kapita_id):
     try:
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
-        v_cursor.execute(
-            'SELECT COUNT(*) as count FROM users WHERE ugereja = %s AND ukapita = %s',
-            (p_church_gkode, p_kapita_id)
-        )
+        v_cursor.execute("""
+            SELECT COUNT(*) as count FROM users
+            WHERE ugereja = %s AND (ukapita_sesi_1 = %s OR ukapita_sesi_2 = %s)
+        """, (p_church_gkode, p_kapita_id, p_kapita_id))
         v_row = v_cursor.fetchone()
         return v_row['count'] if v_row else 0
     except Exception as e:
@@ -623,15 +624,15 @@ def dao_count_users_by_church_and_kapita(p_church_gkode, p_kapita_id):
             v_cursor.close()
 
 
-def dao_create_user(p_full_name, p_email, p_phone, p_birth_date, p_address, p_church_gkode, p_ukapita, p_notes):
+def dao_create_user(p_full_name, p_email, p_phone, p_church_gkode, p_ukapita_sesi_1, p_ukapita_sesi_2):
     v_cursor = None
     try:
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
-            INSERT INTO users (unama, uemail, uphone, ubirth_date, uaddress, ugereja, ukapita, unotes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING uid
-        """, (p_full_name, p_email, p_phone, p_birth_date, p_address, p_church_gkode, p_ukapita, p_notes))
+            INSERT INTO users (unama, uemail, uphone, ugereja, ukapita_sesi_1, ukapita_sesi_2)
+            VALUES (%s, %s, %s, %s, %s, %s) RETURNING uid
+        """, (p_full_name, p_email, p_phone, p_church_gkode, p_ukapita_sesi_1, p_ukapita_sesi_2))
         v_new_id = v_cursor.fetchone()["uid"]
         v_conn.commit()
         return v_new_id
@@ -649,13 +650,15 @@ def dao_get_all_users():
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
-            SELECT u.uid, u.unama, u.uemail, u.uphone, u.ubirth_date, u.uaddress,
+            SELECT u.uid, u.unama, u.uemail, u.uphone,
                    u.ugereja, g.gkode, g.gnama AS church_name,
-                   u.ukapita, k.namakapita AS kapita_name,
-                   u.unotes, u.uregistered_at
+                   u.ukapita_sesi_1, k1.namakapita AS kapita_name_sesi_1,
+                   u.ukapita_sesi_2, k2.namakapita AS kapita_name_sesi_2,
+                   u.uregistered_at
             FROM users u
             JOIN gereja g ON g.gkode = u.ugereja
-            JOIN kapita k ON k.idkapita = u.ukapita
+            JOIN kapita k1 ON k1.idkapita = u.ukapita_sesi_1
+            JOIN kapita k2 ON k2.idkapita = u.ukapita_sesi_2
             ORDER BY u.unama ASC
         """)
         return [dict(row) for row in v_cursor.fetchall()]
@@ -673,13 +676,15 @@ def dao_get_user_by_id(p_uid):
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
-            SELECT u.uid, u.unama, u.uemail, u.uphone, u.ubirth_date, u.uaddress,
+            SELECT u.uid, u.unama, u.uemail, u.uphone,
                    u.ugereja, g.gkode, g.gnama AS church_name,
-                   u.ukapita, k.namakapita AS kapita_name,
-                   u.unotes, u.uregistered_at
+                   u.ukapita_sesi_1, k1.namakapita AS kapita_name_sesi_1,
+                   u.ukapita_sesi_2, k2.namakapita AS kapita_name_sesi_2,
+                   u.uregistered_at
             FROM users u
             JOIN gereja g ON g.gkode = u.ugereja
-            JOIN kapita k ON k.idkapita = u.ukapita
+            JOIN kapita k1 ON k1.idkapita = u.ukapita_sesi_1
+            JOIN kapita k2 ON k2.idkapita = u.ukapita_sesi_2
             WHERE u.uid = %s
         """, (p_uid,))
         v_row = v_cursor.fetchone()
@@ -692,17 +697,17 @@ def dao_get_user_by_id(p_uid):
             v_cursor.close()
 
 
-def dao_update_user(p_uid, p_full_name, p_email, p_phone, p_birth_date, p_address, p_church_gkode, p_ukapita, p_notes):
+def dao_update_user(p_uid, p_full_name, p_email, p_phone, p_church_gkode, p_ukapita_sesi_1, p_ukapita_sesi_2):
     v_cursor = None
     try:
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
             UPDATE users SET
-                unama = %s, uemail = %s, uphone = %s, ubirth_date = %s,
-                uaddress = %s, ugereja = %s, ukapita = %s, unotes = %s
+                unama = %s, uemail = %s, uphone = %s,
+                ugereja = %s, ukapita_sesi_1 = %s, ukapita_sesi_2 = %s
             WHERE uid = %s
-        """, (p_full_name, p_email, p_phone, p_birth_date, p_address, p_church_gkode, p_ukapita, p_notes, p_uid))
+        """, (p_full_name, p_email, p_phone, p_church_gkode, p_ukapita_sesi_1, p_ukapita_sesi_2, p_uid))
         v_conn.commit()
         return v_cursor.rowcount > 0
     except Exception as e:

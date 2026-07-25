@@ -78,6 +78,14 @@ class ApiClient {
   }
 
   // ═══════════════════════════════════════════════════════════
+  // Ping
+  // ═══════════════════════════════════════════════════════════
+
+  async ping() {
+    return this._request('GET', '/api/ping');
+  }
+
+  // ═══════════════════════════════════════════════════════════
   // Auth
   // ═══════════════════════════════════════════════════════════
 
@@ -195,17 +203,15 @@ class ApiClient {
   // Registration
   // ═══════════════════════════════════════════════════════════
 
-  async createRegistration({ fullName, email, phone, birthDate, address, churchGkode, kapitaId, notes = null }) {
+  async createRegistration({ fullName, email, phone, churchGkode, kapitaIdSesi1, kapitaIdSesi2 }) {
     const body = {
       full_name: fullName,
       email,
       phone,
-      birth_date: birthDate,
-      address,
       church_gkode: churchGkode,
-      kapita_id: kapitaId,
+      kapita_id_sesi_1: kapitaIdSesi1,
+      kapita_id_sesi_2: kapitaIdSesi2,
     };
-    if (notes) body.notes = notes;
     return this._request('POST', '/api/registrations', body);
   }
 
@@ -217,17 +223,15 @@ class ApiClient {
     return this._request('GET', `/api/registrations/check/${email}`);
   }
 
-  async updateRegistration(regId, { fullName, email, phone, birthDate, address, churchGkode, kapitaId, notes = null }) {
+  async updateRegistration(regId, { fullName, email, phone, churchGkode, kapitaIdSesi1, kapitaIdSesi2 }) {
     const body = {
       full_name: fullName,
       email,
       phone,
-      birth_date: birthDate,
-      address,
       church_gkode: churchGkode,
-      kapita_id: kapitaId,
+      kapita_id_sesi_1: kapitaIdSesi1,
+      kapita_id_sesi_2: kapitaIdSesi2,
     };
-    if (notes) body.notes = notes;
     return this._request('PUT', `/api/registrations/${regId}`, body);
   }
 
@@ -247,31 +251,27 @@ class ApiClient {
     return this._request('GET', `/api/users/${uid}`);
   }
 
-  async createUser({ fullName, email, phone, birthDate, address, churchGkode, ukapita, notes = null }) {
+  async createUser({ fullName, email, phone, churchGkode, ukapitaSesi1, ukapitaSesi2 }) {
     const body = {
       full_name: fullName,
       email,
       phone,
-      birth_date: birthDate,
-      address,
       church_gkode: churchGkode,
-      ukapita,
+      ukapita_sesi_1: ukapitaSesi1,
+      ukapita_sesi_2: ukapitaSesi2,
     };
-    if (notes) body.notes = notes;
     return this._request('POST', '/api/users', body);
   }
 
-  async updateUser(uid, { fullName, email, phone, birthDate, address, churchGkode, ukapita, notes = null }) {
+  async updateUser(uid, { fullName, email, phone, churchGkode, ukapitaSesi1, ukapitaSesi2 }) {
     const body = {
       full_name: fullName,
       email,
       phone,
-      birth_date: birthDate,
-      address,
       church_gkode: churchGkode,
-      ukapita,
+      ukapita_sesi_1: ukapitaSesi1,
+      ukapita_sesi_2: ukapitaSesi2,
     };
-    if (notes) body.notes = notes;
     return this._request('PUT', `/api/users/${uid}`, body);
   }
 
@@ -317,11 +317,9 @@ async function main() {
     fullName: 'Yohanes Test',
     email: 'yohanes@test.com',
     phone: '08123456789',
-    birthDate: '2000-01-15',
-    address: 'Jl. Panjang No. 1',
     churchGkode: gkode || 'GKY001',
-    ukapita: kapitaId || 1,
-    notes: 'Pemuda',
+    ukapitaSesi1: kapitaId || 1,
+    ukapitaSesi2: kapitaId || 1,
   });
   show('POST /api/users (create)', res);
   const uid = res.results?.uid;
@@ -337,11 +335,9 @@ async function main() {
       fullName: 'Yohanes Updated',
       email: 'yohanes@test.com',
       phone: '08123456789',
-      birthDate: '2000-01-15',
-      address: 'Jl. Panjang No. 1 Updated',
       churchGkode: gkode || 'GKY001',
-      ukapita: kapitaId || 1,
-      notes: 'Pemuda Updated',
+      ukapitaSesi1: kapitaId || 1,
+      ukapitaSesi2: kapitaId || 1,
     });
     show(`PUT /api/users/${uid} (update)`, res);
   }
@@ -351,11 +347,9 @@ async function main() {
     fullName: 'Yohanes Test',
     email: 'yohanes@test.com',
     phone: '08123456789',
-    birthDate: '2000-01-15',
-    address: 'Jl. Panjang No. 1',
     churchGkode: gkode || 'GKY001',
-    kapitaId: kapitaId || 1,
-    notes: 'Pendaftaran kapita',
+    kapitaIdSesi1: kapitaId || 1,
+    kapitaIdSesi2: kapitaId || 1,
   });
   show('POST /api/registrations (create)', res);
   const regId = res.results?.id;

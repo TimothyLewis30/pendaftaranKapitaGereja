@@ -154,12 +154,10 @@ export async function createRegistration(data: RegistrationPayload, adminId?: nu
     full_name: data.fullName,
     email: data.email,
     phone: data.phone,
-    birth_date: data.birthDate,
-    address: data.address,
     church_gkode: data.churchGkode,
-    kapita_id: data.kapitaId,
+    kapita_id_sesi_1: data.kapitaIdSesi1,
+    kapita_id_sesi_2: data.kapitaIdSesi2,
   };
-  if (data.notes) body.notes = data.notes;
   return request("POST", "/api/registrations", body, null, adminId ?? null);
 }
 
@@ -173,12 +171,10 @@ export async function createUser(data: UserPayload) {
     full_name: data.fullName,
     email: data.email,
     phone: data.phone,
-    birth_date: data.birthDate,
-    address: data.address,
     church_gkode: data.churchGkode,
-    ukapita: data.ukapita,
+    ukapita_sesi_1: data.ukapitaSesi1,
+    ukapita_sesi_2: data.ukapitaSesi2,
   };
-  if (data.notes) body.notes = data.notes;
   return request("POST", "/api/users", body);
 }
 
@@ -193,6 +189,7 @@ export interface Church {
   total_quota: number;
   total_registered: number;
   quota_left: number;
+  flag_gereja: string;
   kapita: ChurchKapitaQuota[];
 }
 
@@ -209,26 +206,25 @@ export interface ChurchKapitaQuota {
   kuota: number;
   registered: number;
   quota_left: number;
+  effective_kuota: number;
+  effective_left: number;
+  flag_kapita: string;
 }
 
 export interface RegistrationPayload {
   fullName: string;
   email: string;
   phone: string;
-  birthDate: string;
-  address: string;
   churchGkode: string;
-  kapitaId: number;
-  notes?: string;
+  kapitaIdSesi1: number;
+  kapitaIdSesi2: number;
 }
 
 export interface UserPayload {
   fullName: string;
   email: string;
   phone: string;
-  birthDate: string;
-  address: string;
   churchGkode: string;
-  ukapita: number;
-  notes?: string;
+  ukapitaSesi1: number;
+  ukapitaSesi2: number;
 }

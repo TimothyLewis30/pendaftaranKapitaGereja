@@ -102,7 +102,25 @@ pm.request.headers.add({ key: 'X-Signature', value: signature });
 
 ## Daftar Endpoint
 
-### 1. Login Admin
+### 1. Ping / Health Check
+
+**GET** `/api/ping`
+
+Tidak perlu signature. Endpoint ini untuk keep-alive (hit setiap 10 menit agar server tidak sleep di free tier).
+
+Response (200):
+```json
+{
+  "code": 200,
+  "status": true,
+  "message": "Server is running.",
+  "results": []
+}
+```
+
+---
+
+### 2. Login Admin
 
 **POST** `/api/admin/login`
 
@@ -141,7 +159,7 @@ Response Error (401):
 
 ---
 
-### 2. Daftar Semua Gereja
+### 3. Daftar Semua Gereja
 
 **GET** `/api/churches`
 
@@ -176,7 +194,7 @@ Response (200):
 
 ---
 
-### 3. Detail Gereja
+### 4. Detail Gereja
 
 **GET** `/api/churches/{gkode}`
 
@@ -211,7 +229,7 @@ Response (200):
 
 ---
 
-### 4. Tambah Gereja (Admin/SuperAdmin)
+### 5. Tambah Gereja (Admin/SuperAdmin)
 
 **POST** `/api/churches`
 
@@ -243,7 +261,7 @@ Response (201):
 
 ---
 
-### 5. Update Gereja (Admin/SuperAdmin)
+### 6. Update Gereja (Admin/SuperAdmin)
 
 **PUT** `/api/churches/{gkode}`
 
@@ -275,7 +293,7 @@ Response (200):
 
 ---
 
-### 6. Hapus Gereja (Admin/SuperAdmin)
+### 7. Hapus Gereja (Admin/SuperAdmin)
 
 **DELETE** `/api/churches/{gkode}`
 
@@ -293,7 +311,7 @@ Response (200):
 
 ---
 
-### 7. Daftar Semua Kapita
+### 8. Daftar Semua Kapita
 
 **GET** `/api/kapita`
 
@@ -318,7 +336,7 @@ Response (200):
 
 ---
 
-### 8. Detail Kapita
+### 9. Detail Kapita
 
 **GET** `/api/kapita/{idkapita}`
 
@@ -337,7 +355,7 @@ Response (200):
 
 ---
 
-### 9. Tambah Kapita (Admin/SuperAdmin)
+### 10. Tambah Kapita (Admin/SuperAdmin)
 
 **POST** `/api/kapita`
 
@@ -365,7 +383,7 @@ Response (201):
 
 ---
 
-### 10. Update Kapita (Admin/SuperAdmin)
+### 11. Update Kapita (Admin/SuperAdmin)
 
 **PUT** `/api/kapita/{idkapita}`
 
@@ -393,7 +411,7 @@ Response (200):
 
 ---
 
-### 11. Hapus Kapita (Admin/SuperAdmin)
+### 12. Hapus Kapita (Admin/SuperAdmin)
 
 **DELETE** `/api/kapita/{idkapita}`
 
@@ -411,7 +429,7 @@ Response (200):
 
 ---
 
-### 12. Set Kuota Kapita Gereja (Admin/SuperAdmin)
+### 13. Set Kuota Kapita Gereja (Admin/SuperAdmin)
 
 **POST** `/api/churches/{gkode}/kapita-quota`
 
@@ -445,7 +463,7 @@ Response (201):
 
 ---
 
-### 13. Daftar Kuota Kapita Gereja
+### 14. Daftar Kuota Kapita Gereja
 
 **GET** `/api/churches/{gkode}/kapita-quota`
 
@@ -471,7 +489,7 @@ Response (200):
 
 ---
 
-### 14. Detail Kuota Kapita Gereja
+### 15. Detail Kuota Kapita Gereja
 
 **GET** `/api/churches/{gkode}/kapita-quota/{idkapita}`
 
@@ -495,7 +513,7 @@ Response (200):
 
 ---
 
-### 15. Update Kuota Kapita Gereja (Admin/SuperAdmin)
+### 16. Update Kuota Kapita Gereja (Admin/SuperAdmin)
 
 **PUT** `/api/churches/{gkode}/kapita-quota/{idkapita}`
 
@@ -529,7 +547,7 @@ Response (200):
 
 ---
 
-### 16. Hapus Kuota Kapita Gereja (Admin/SuperAdmin)
+### 17. Hapus Kuota Kapita Gereja (Admin/SuperAdmin)
 
 **DELETE** `/api/churches/{gkode}/kapita-quota/{idkapita}`
 
@@ -547,7 +565,7 @@ Response (200):
 
 ---
 
-### 17. Buat Pendaftaran Baru
+### 18. Buat Pendaftaran Baru
 
 **POST** `/api/registrations`
 
@@ -557,11 +575,9 @@ Body:
   "full_name": "Budi Santoso",
   "email": "budi@email.com",
   "phone": "08123456789",
-  "birth_date": "1995-08-17",
-  "address": "Jl. Merdeka No. 1, Jakarta",
   "church_gkode": "GKY001",
-  "kapita_id": 1,
-  "notes": "Tertarik pelayanan musik"
+  "kapita_id_sesi_1": 1,
+  "kapita_id_sesi_2": 2
 }
 ```
 
@@ -576,13 +592,12 @@ Response (201):
     "full_name": "Budi Santoso",
     "email": "budi@email.com",
     "phone": "08123456789",
-    "birth_date": "1995-08-17",
-    "address": "Jl. Merdeka No. 1, Jakarta",
     "church_gkode": "GKY001",
     "church_name": "Gereja Kristus Yesus",
-    "kapita_id": 1,
-    "kapita_name": "Pemuda",
-    "notes": "Tertarik pelayanan musik",
+    "kapita_id_sesi_1": 1,
+    "kapita_name_sesi_1": "Bapak",
+    "kapita_id_sesi_2": 2,
+    "kapita_name_sesi_2": "Ibu",
     "registered_at": "2026-07-22 12:00:00"
   }
 }
@@ -590,7 +605,7 @@ Response (201):
 
 ---
 
-### 18. Cek Email Terdaftar
+### 19. Cek Email Terdaftar
 
 **GET** `/api/registrations/check/{email}`
 
@@ -612,7 +627,7 @@ Response (200):
 
 ---
 
-### 19. Detail Pendaftaran
+### 20. Detail Pendaftaran
 
 **GET** `/api/registrations/{id}`
 
@@ -627,13 +642,12 @@ Response (200):
     "full_name": "Budi Santoso",
     "email": "budi@email.com",
     "phone": "08123456789",
-    "birth_date": "1995-08-17",
-    "address": "Jl. Merdeka No. 1, Jakarta",
     "church_gkode": "GKY001",
     "church_name": "Gereja Kristus Yesus",
-    "kapita_id": 1,
-    "kapita_name": "Pemuda",
-    "notes": "Tertarik pelayanan musik",
+    "kapita_id_sesi_1": 1,
+    "kapita_name_sesi_1": "Bapak",
+    "kapita_id_sesi_2": 2,
+    "kapita_name_sesi_2": "Ibu",
     "registered_at": "2026-07-22 12:00:00"
   }
 }
@@ -641,7 +655,7 @@ Response (200):
 
 ---
 
-### 20. Update Pendaftaran
+### 21. Update Pendaftaran
 
 **PUT** `/api/registrations/{id}`
 
@@ -651,11 +665,9 @@ Body:
   "full_name": "Budi Santoso Updated",
   "email": "budi.updated@email.com",
   "phone": "08123456789",
-  "birth_date": "1995-08-17",
-  "address": "Jl. Baru No. 2, Jakarta",
   "church_gkode": "GKY001",
-  "kapita_id": 1,
-  "notes": "Update catatan"
+  "kapita_id_sesi_1": 1,
+  "kapita_id_sesi_2": 3
 }
 ```
 
@@ -670,13 +682,12 @@ Response (200):
     "full_name": "Budi Santoso Updated",
     "email": "budi.updated@email.com",
     "phone": "08123456789",
-    "birth_date": "1995-08-17",
-    "address": "Jl. Baru No. 2, Jakarta",
     "church_gkode": "GKY001",
     "church_name": "Gereja Kristus Yesus",
-    "kapita_id": 1,
-    "kapita_name": "Pemuda",
-    "notes": "Update catatan",
+    "kapita_id_sesi_1": 1,
+    "kapita_name_sesi_1": "Bapak",
+    "kapita_id_sesi_2": 3,
+    "kapita_name_sesi_2": "Pemuda",
     "registered_at": "2026-07-22 12:00:00"
   }
 }
@@ -684,7 +695,7 @@ Response (200):
 
 ---
 
-### 21. Hapus Pendaftaran
+### 22. Hapus Pendaftaran
 
 **DELETE** `/api/registrations/{id}`
 
@@ -700,169 +711,7 @@ Response (200):
 
 ---
 
-### 22. Tambah User Baru
-
-**POST** `/api/users`
-
-Body:
-```json
-{
-  "full_name": "Budi Santoso",
-  "email": "budi@email.com",
-  "phone": "08123456789",
-  "birth_date": "1995-08-17",
-  "address": "Jl. Merdeka No. 1, Jakarta",
-  "church_gkode": "GKY001",
-  "ukapita": 1,
-  "notes": "Pemuda"
-}
-```
-
-Response (201):
-```json
-{
-  "code": 201,
-  "status": true,
-  "message": "User berhasil disimpan.",
-  "results": {
-    "uid": 1,
-    "full_name": "Budi Santoso",
-    "email": "budi@email.com",
-    "phone": "08123456789",
-    "birth_date": "1995-08-17",
-    "address": "Jl. Merdeka No. 1, Jakarta",
-    "church_gkode": "GKY001",
-    "church_name": "Gereja Kristus Yesus",
-    "ukapita": 1,
-    "kapita_name": "Pemuda",
-    "notes": "Pemuda",
-    "registered_at": "2026-07-22 12:00:00"
-  }
-}
-```
-
----
-
-### 23. Daftar Semua User
-
-**GET** `/api/users`
-
-Response (200):
-```json
-{
-  "code": 200,
-  "status": true,
-  "message": "Daftar user berhasil ditemukan.",
-  "results": [
-    {
-      "uid": 1,
-      "full_name": "Budi Santoso",
-      "email": "budi@email.com",
-      "phone": "08123456789",
-      "birth_date": "1995-08-17",
-      "address": "Jl. Merdeka No. 1, Jakarta",
-      "church_gkode": "GKY001",
-      "church_name": "Gereja Kristus Yesus",
-      "ukapita": 1,
-      "kapita_name": "Pemuda",
-      "notes": "Pemuda",
-      "registered_at": "2026-07-22 12:00:00"
-    }
-  ]
-}
-```
-
----
-
-### 24. Detail User
-
-**GET** `/api/users/{uid}`
-
-Response (200):
-```json
-{
-  "code": 200,
-  "status": true,
-  "message": "Detail user berhasil ditemukan.",
-  "results": {
-    "uid": 1,
-    "full_name": "Budi Santoso",
-    "email": "budi@email.com",
-    "phone": "08123456789",
-    "birth_date": "1995-08-17",
-    "address": "Jl. Merdeka No. 1, Jakarta",
-    "church_gkode": "GKY001",
-    "church_name": "Gereja Kristus Yesus",
-    "ukapita": 1,
-    "kapita_name": "Pemuda",
-    "notes": "Pemuda",
-    "registered_at": "2026-07-22 12:00:00"
-  }
-}
-```
-
----
-
-### 25. Update User
-
-**PUT** `/api/users/{uid}`
-
-Body:
-```json
-{
-  "full_name": "Budi Santoso Updated",
-  "email": "budi.updated@email.com",
-  "phone": "08123456789",
-  "birth_date": "1995-08-17",
-  "address": "Jl. Baru No. 2, Jakarta",
-  "church_gkode": "GKY001",
-  "ukapita": 1,
-  "notes": "Updated"
-}
-```
-
-Response (200):
-```json
-{
-  "code": 200,
-  "status": true,
-  "message": "User berhasil diupdate.",
-  "results": {
-    "uid": 1,
-    "full_name": "Budi Santoso Updated",
-    "email": "budi.updated@email.com",
-    "phone": "08123456789",
-    "birth_date": "1995-08-17",
-    "address": "Jl. Baru No. 2, Jakarta",
-    "church_gkode": "GKY001",
-    "church_name": "Gereja Kristus Yesus",
-    "ukapita": 1,
-    "kapita_name": "Pemuda",
-    "notes": "Updated",
-    "registered_at": "2026-07-22 12:00:00"
-  }
-}
-```
-
----
-
-### 26. Hapus User
-
-**DELETE** `/api/users/{uid}`
-
-Response (200):
-```json
-{
-  "code": 200,
-  "status": true,
-  "message": "User berhasil dihapus.",
-  "results": []
-}
-```
-
----
-
-### 27. Daftar Semua Admin (SuperAdmin)
+### 23. Daftar Semua Admin (SuperAdmin)
 
 **GET** `/api/admins`
 
@@ -887,7 +736,7 @@ Response (200):
 
 ---
 
-### 28. Tambah Admin Baru (SuperAdmin)
+### 24. Tambah Admin Baru (SuperAdmin)
 
 **POST** `/api/admins`
 
@@ -922,7 +771,7 @@ Response (201):
 
 ---
 
-### 29. Detail Admin (SuperAdmin)
+### 25. Detail Admin (SuperAdmin)
 
 **GET** `/api/admins/{aid}`
 
@@ -945,7 +794,7 @@ Response (200):
 
 ---
 
-### 30. Update Admin (SuperAdmin)
+### 26. Update Admin (SuperAdmin)
 
 **PUT** `/api/admins/{aid}`
 
@@ -978,7 +827,7 @@ Response (200):
 
 ---
 
-### 31. Hapus Admin (SuperAdmin)
+### 27. Hapus Admin (SuperAdmin)
 
 **DELETE** `/api/admins/{aid}`
 

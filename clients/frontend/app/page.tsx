@@ -21,11 +21,9 @@ export default function Home() {
     fullName: "",
     email: "",
     phone: "",
-    birthDate: "",
-    address: "",
     churchGkode: "",
-    ukapita: 0,
-    notes: "",
+    ukapitaSesi1: 0,
+    ukapitaSesi2: 0,
   });
 
   useEffect(() => {
@@ -49,7 +47,7 @@ export default function Home() {
   const selectedChurch = churches.find((c) => c.id === form.churchGkode);
   const availableKapita = selectedChurch
     ? kapitaList.filter((k) =>
-        selectedChurch.kapita.some((q) => q.idkapita === k.idkapita && q.quota_left > 0)
+        selectedChurch.kapita.some((q) => q.idkapita === k.idkapita && q.effective_left > 0)
       )
     : [];
 
@@ -59,7 +57,7 @@ export default function Home() {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: name === "ukapita" ? Number(value) : value,
+      [name]: (name === "ukapitaSesi1" || name === "ukapitaSesi2") ? Number(value) : value,
     }));
   };
 
@@ -80,11 +78,9 @@ export default function Home() {
         fullName: form.fullName,
         email: form.email,
         phone: form.phone,
-        birthDate: form.birthDate,
-        address: form.address,
         churchGkode: form.churchGkode,
-        ukapita: form.ukapita,
-        notes: form.notes || undefined,
+        ukapitaSesi1: form.ukapitaSesi1,
+        ukapitaSesi2: form.ukapitaSesi2,
       });
 
       if (res.status) {
@@ -93,11 +89,9 @@ export default function Home() {
           fullName: "",
           email: "",
           phone: "",
-          birthDate: "",
-          address: "",
           churchGkode: "",
-          ukapita: 0,
-          notes: "",
+          ukapitaSesi1: 0,
+          ukapitaSesi2: 0,
         });
       } else {
         setMessage({ type: "error", text: res.detail || "Gagal mendaftar." });
@@ -178,30 +172,6 @@ export default function Home() {
         </div>
 
         <div>
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 4 }}>Tanggal Lahir *</label>
-          <input
-            type="date"
-            name="birthDate"
-            value={form.birthDate}
-            onChange={handleChange}
-            required
-            style={{ width: "100%", padding: "0.5rem", border: "1px solid #ccc", borderRadius: 4 }}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 4 }}>Alamat *</label>
-          <textarea
-            name="address"
-            value={form.address}
-            onChange={handleChange}
-            required
-            rows={3}
-            style={{ width: "100%", padding: "0.5rem", border: "1px solid #ccc", borderRadius: 4 }}
-          />
-        </div>
-
-        <div>
           <label style={{ display: "block", fontWeight: 500, marginBottom: 4 }}>Gereja *</label>
           <select
             name="churchGkode"
@@ -220,21 +190,21 @@ export default function Home() {
         </div>
 
         <div>
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 4 }}>Kapita *</label>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 4 }}>Kapita Sesi 1 *</label>
           <select
-            name="ukapita"
-            value={form.ukapita}
+            name="ukapitaSesi1"
+            value={form.ukapitaSesi1}
             onChange={handleChange}
             required
             disabled={!form.churchGkode}
             style={{ width: "100%", padding: "0.5rem", border: "1px solid #ccc", borderRadius: 4 }}
           >
-            <option value={0}>-- Pilih Kapita --</option>
+            <option value={0}>-- Pilih Kapita Sesi 1 --</option>
             {availableKapita.map((k) => {
               const quota = selectedChurch?.kapita.find((q) => q.idkapita === k.idkapita);
               return (
                 <option key={k.idkapita} value={k.idkapita}>
-                  {k.namakapita} (Sisa: {quota?.quota_left ?? 0})
+                  {k.namakapita} (Sisa: {quota?.effective_left ?? 0})
                 </option>
               );
             })}
@@ -242,14 +212,25 @@ export default function Home() {
         </div>
 
         <div>
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 4 }}>Catatan</label>
-          <textarea
-            name="notes"
-            value={form.notes}
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 4 }}>Kapita Sesi 2 *</label>
+          <select
+            name="ukapitaSesi2"
+            value={form.ukapitaSesi2}
             onChange={handleChange}
-            rows={2}
+            required
+            disabled={!form.churchGkode}
             style={{ width: "100%", padding: "0.5rem", border: "1px solid #ccc", borderRadius: 4 }}
-          />
+          >
+            <option value={0}>-- Pilih Kapita Sesi 2 --</option>
+            {availableKapita.map((k) => {
+              const quota = selectedChurch?.kapita.find((q) => q.idkapita === k.idkapita);
+              return (
+                <option key={k.idkapita} value={k.idkapita}>
+                  {k.namakapita} (Sisa: {quota?.effective_left ?? 0})
+                </option>
+              );
+            })}
+          </select>
         </div>
 
         <button

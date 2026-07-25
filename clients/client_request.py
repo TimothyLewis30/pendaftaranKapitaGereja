@@ -96,6 +96,9 @@ class ApiClient:
 
     # ── Auth ──────────────────────────────────────────────────
 
+    def ping(self) -> dict:
+        return self._request("GET", "/api/ping")
+
     def login(self, p_email: str, p_password: str) -> dict:
         return self._request("POST", "/api/admin/login", p_json_body={
             "email": p_email,
@@ -185,19 +188,15 @@ class ApiClient:
     # ── Registration ──────────────────────────────────────────
 
     def create_registration(self, p_full_name: str, p_email: str, p_phone: str,
-                            p_birth_date: str, p_address: str, p_church_gkode: str,
-                            p_kapita_id: int, p_notes: str = None) -> dict:
+                            p_church_gkode: str, p_kapita_id_sesi_1: int, p_kapita_id_sesi_2: int) -> dict:
         v_body = {
             "full_name": p_full_name,
             "email": p_email,
             "phone": p_phone,
-            "birth_date": p_birth_date,
-            "address": p_address,
             "church_gkode": p_church_gkode,
-            "kapita_id": p_kapita_id,
+            "kapita_id_sesi_1": p_kapita_id_sesi_1,
+            "kapita_id_sesi_2": p_kapita_id_sesi_2,
         }
-        if p_notes:
-            v_body["notes"] = p_notes
         return self._request("POST", "/api/registrations", p_json_body=v_body)
 
     def check_registration(self, p_email: str) -> dict:
@@ -207,19 +206,15 @@ class ApiClient:
         return self._request("GET", f"/api/registrations/{p_reg_id}")
 
     def update_registration(self, p_reg_id: int, p_full_name: str, p_email: str, p_phone: str,
-                            p_birth_date: str, p_address: str, p_church_gkode: str,
-                            p_kapita_id: int, p_notes: str = None) -> dict:
+                            p_church_gkode: str, p_kapita_id_sesi_1: int, p_kapita_id_sesi_2: int) -> dict:
         v_body = {
             "full_name": p_full_name,
             "email": p_email,
             "phone": p_phone,
-            "birth_date": p_birth_date,
-            "address": p_address,
             "church_gkode": p_church_gkode,
-            "kapita_id": p_kapita_id,
+            "kapita_id_sesi_1": p_kapita_id_sesi_1,
+            "kapita_id_sesi_2": p_kapita_id_sesi_2,
         }
-        if p_notes:
-            v_body["notes"] = p_notes
         return self._request("PUT", f"/api/registrations/{p_reg_id}", p_json_body=v_body)
 
     def delete_registration(self, p_reg_id: int) -> dict:
@@ -234,35 +229,27 @@ class ApiClient:
         return self._request("GET", f"/api/users/{p_uid}")
 
     def create_user(self, p_full_name: str, p_email: str, p_phone: str,
-                    p_birth_date: str, p_address: str, p_church_gkode: str,
-                    p_ukapita: int, p_notes: str = None) -> dict:
+                    p_church_gkode: str, p_ukapita_sesi_1: int, p_ukapita_sesi_2: int) -> dict:
         v_body = {
             "full_name": p_full_name,
             "email": p_email,
             "phone": p_phone,
-            "birth_date": p_birth_date,
-            "address": p_address,
             "church_gkode": p_church_gkode,
-            "ukapita": p_ukapita,
+            "ukapita_sesi_1": p_ukapita_sesi_1,
+            "ukapita_sesi_2": p_ukapita_sesi_2,
         }
-        if p_notes:
-            v_body["notes"] = p_notes
         return self._request("POST", "/api/users", p_json_body=v_body)
 
     def update_user(self, p_uid: int, p_full_name: str, p_email: str, p_phone: str,
-                    p_birth_date: str, p_address: str, p_church_gkode: str,
-                    p_ukapita: int, p_notes: str = None) -> dict:
+                    p_church_gkode: str, p_ukapita_sesi_1: int, p_ukapita_sesi_2: int) -> dict:
         v_body = {
             "full_name": p_full_name,
             "email": p_email,
             "phone": p_phone,
-            "birth_date": p_birth_date,
-            "address": p_address,
             "church_gkode": p_church_gkode,
-            "ukapita": p_ukapita,
+            "ukapita_sesi_1": p_ukapita_sesi_1,
+            "ukapita_sesi_2": p_ukapita_sesi_2,
         }
-        if p_notes:
-            v_body["notes"] = p_notes
         return self._request("PUT", f"/api/users/{p_uid}", p_json_body=v_body)
 
     def delete_user(self, p_uid: int) -> dict:
@@ -311,11 +298,9 @@ if __name__ == "__main__":
         p_full_name="Yohanes Test",
         p_email="yohanes@test.com",
         p_phone="08123456789",
-        p_birth_date="2000-01-15",
-        p_address="Jl. Panjang No. 1",
         p_church_gkode=v_gkode or "GKY001",
-        p_ukapita=v_kapita_id or 1,
-        p_notes="Pemuda",
+        p_ukapita_sesi_1=v_kapita_id or 1,
+        p_ukapita_sesi_2=v_kapita_id or 1,
     )
     show("POST /api/users (create)", v_resp)
     v_uid = v_resp["results"]["uid"] if v_resp.get("status") else None
@@ -330,9 +315,7 @@ if __name__ == "__main__":
         v_resp = v_client.update_user(
             p_uid=v_uid, p_full_name="Yohanes Updated",
             p_email="yohanes@test.com", p_phone="08123456789",
-            p_birth_date="2000-01-15", p_address="Jl. Panjang No. 1 Updated",
-            p_church_gkode=v_gkode or "GKY001", p_ukapita=v_kapita_id or 1,
-            p_notes="Pemuda Updated",
+            p_church_gkode=v_gkode or "GKY001", p_ukapita_sesi_1=v_kapita_id or 1, p_ukapita_sesi_2=v_kapita_id or 1,
         )
         show(f"PUT /api/users/{v_uid} (update)", v_resp)
 
@@ -346,11 +329,9 @@ if __name__ == "__main__":
         p_full_name="Yohanes Test",
         p_email="yohanes@test.com",
         p_phone="08123456789",
-        p_birth_date="2000-01-15",
-        p_address="Jl. Panjang No. 1",
         p_church_gkode=v_gkode or "GKY001",
-        p_kapita_id=v_kapita_id or 1,
-        p_notes="Pendaftaran kapita",
+        p_kapita_id_sesi_1=v_kapita_id or 1,
+        p_kapita_id_sesi_2=v_kapita_id or 1,
     )
     show("POST /api/registrations (create)", v_resp)
     v_reg_id = v_resp["results"]["id"] if v_resp.get("status") else None
@@ -366,9 +347,7 @@ if __name__ == "__main__":
         v_resp = v_client.update_registration(
             p_reg_id=v_reg_id, p_full_name="Yohanes Updated",
             p_email="yohanes@test.com", p_phone="08123456789",
-            p_birth_date="2000-01-15", p_address="Jl. Panjang No. 1 Updated",
-            p_church_gkode=v_gkode or "GKY001", p_kapita_id=v_kapita_id or 1,
-            p_notes="Pendaftaran kapita updated",
+            p_church_gkode=v_gkode or "GKY001", p_kapita_id_sesi_1=v_kapita_id or 1, p_kapita_id_sesi_2=v_kapita_id or 1,
         )
         show(f"PUT /api/registrations/{v_reg_id} (update)", v_resp)
 

@@ -176,6 +176,12 @@ Semua response menggunakan format:
 
 ### PUBLIK (Tidak Butuh Login)
 
+#### Ping / Health Check
+
+| Method | Endpoint             | Keterangan                              |
+| ------ | -------------------- | --------------------------------------- |
+| GET    | `/api/ping`          | Health check server (untuk keep-alive)  |
+
 #### Gereja
 
 | Method | Endpoint                           | Keterangan                      |
@@ -190,21 +196,12 @@ Semua response menggunakan format:
 | GET    | `/api/kapita`                      | List semua kapita               |
 | GET    | `/api/kapita/{idkapita}`           | Detail kapita                   |
 
-#### User (Pendaftaran Mandiri)
-
-| Method | Endpoint                           | Keterangan                      |
-| ------ | ---------------------------------- | ------------------------------- |
-| POST   | `/api/users`                       | Daftar user baru                |
-| GET    | `/api/users`                       | List semua user                 |
-| GET    | `/api/users/{uid}`                 | Detail user                     |
-| PUT    | `/api/users/{uid}`                 | Update user                     |
-| DELETE | `/api/users/{uid}`                 | Hapus user                      |
-
-#### Registrasi (Admin Form)
+#### Registrasi (Pendaftaran Publik & Admin)
 
 | Method | Endpoint                           | Keterangan                      |
 | ------ | ---------------------------------- | ------------------------------- |
 | POST   | `/api/registrations`               | Buat pendaftaran baru           |
+| GET    | `/api/registrations`               | List semua pendaftaran          |
 | GET    | `/api/registrations/{id}`          | Detail pendaftaran              |
 | PUT    | `/api/registrations/{id}`          | Update pendaftaran              |
 | DELETE | `/api/registrations/{id}`          | Hapus pendaftaran               |
@@ -273,21 +270,19 @@ const data = await res.json();
 console.log(data);
 ```
 
-### 2. POST User (Tanpa Login)
+### 2. POST Registrasi (Tanpa Login)
 
 ```javascript
 const body = {
   full_name: 'Budi Santoso',
   email: 'budi@email.com',
   phone: '08123456789',
-  birth_date: '1995-08-17',
-  address: 'Jl. Merdeka No. 1, Jakarta',
   church_gkode: 'GKY001',
-  ukapita: 1,
-  notes: 'Pemuda',
+  kapita_id_sesi_1: 1,
+  kapita_id_sesi_2: 2,
 };
 const headers = generateHeaders(body);
-const res = await fetch('https://pendaftarankapitagereja.onrender.com/api/users', {
+const res = await fetch('https://pendaftarankapitagereja.onrender.com/api/registrations', {
   method: 'POST',
   headers: headers,
   body: JSON.stringify(body),
@@ -338,19 +333,16 @@ console.log(data);
 
 ## Field Reference
 
-### User / Registration
+### Registration
 
-| Field         | Tipe   | Keterangan                    |
-| ------------- | ------ | ----------------------------- |
-| `full_name`   | string | Nama lengkap (min 3, max 100) |
-| `email`       | string | Email valid                   |
-| `phone`       | string | Nomor HP (min 8, max 20)     |
-| `birth_date`  | string | Format: `YYYY-MM-DD`          |
-| `address`     | string | Alamat (min 5 karakter)       |
-| `church_gkode`| string | Kode gereja (dari GET churches)|
-| `ukapita`     | int    | ID kapita (dari GET kapita)   |
-| `kapita_id`   | int    | ID kapita (untuk registration)|
-| `notes`       | string | Catatan (opsional)            |
+| Field              | Tipe   | Keterangan                              |
+| ------------------ | ------ | --------------------------------------- |
+| `full_name`        | string | Nama lengkap (min 3, max 100)           |
+| `email`            | string | Email valid                             |
+| `phone`            | string | Nomor HP (min 8, max 20)               |
+| `church_gkode`     | string | Kode gereja (dari GET churches)         |
+| `kapita_id_sesi_1` | int    | ID kapita sesi 1 (dari GET kapita)      |
+| `kapita_id_sesi_2` | int    | ID kapita sesi 2 (dari GET kapita)      |
 
 ### Church
 
