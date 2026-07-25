@@ -356,7 +356,7 @@ def dao_get_quota_by_church_and_kapita(p_gkode, p_idkapita):
                 GROUP BY gkode, idkapita
             ) r ON r.gkode = gk.gkode AND r.idkapita = gk.idkapita
             WHERE gk.gkode = %s AND gk.idkapita = %s
-        """, (p_gkode, p_idkapita, p_gkode, p_idkapita, p_gkode, p_idkapita))
+        """, (p_gkode, p_idkapita, p_gkode, p_idkapita))
         v_row = v_cursor.fetchone()
         return dict(v_row) if v_row else None
     except Exception as e:
