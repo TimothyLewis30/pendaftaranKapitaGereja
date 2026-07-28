@@ -281,6 +281,10 @@ def dao_get_church_kapita_quotas(p_gkode):
             LEFT JOIN (
                 SELECT gkode, idkapita, COUNT(*) AS reg_count
                 FROM (
+                    SELECT ugereja AS gkode, ukapita_sesi_1 AS idkapita FROM users
+                    UNION ALL
+                    SELECT ugereja AS gkode, ukapita_sesi_2 AS idkapita FROM users
+                    UNION ALL
                     SELECT church_gkode AS gkode, kapita_id_sesi_1 AS idkapita FROM registrations
                     UNION ALL
                     SELECT church_gkode AS gkode, kapita_id_sesi_2 AS idkapita FROM registrations
@@ -348,6 +352,10 @@ def dao_get_quota_by_church_and_kapita(p_gkode, p_idkapita):
             LEFT JOIN (
                 SELECT gkode, idkapita, COUNT(*) AS reg_count
                 FROM (
+                    SELECT ugereja AS gkode, ukapita_sesi_1 AS idkapita FROM users
+                    UNION ALL
+                    SELECT ugereja AS gkode, ukapita_sesi_2 AS idkapita FROM users
+                    UNION ALL
                     SELECT church_gkode AS gkode, kapita_id_sesi_1 AS idkapita FROM registrations
                     UNION ALL
                     SELECT church_gkode AS gkode, kapita_id_sesi_2 AS idkapita FROM registrations
@@ -551,9 +559,17 @@ def dao_count_registrations_by_church_and_kapita(p_church_gkode, p_kapita_id):
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
-            SELECT COUNT(*) as count FROM registrations
-            WHERE church_gkode = %s AND (kapita_id_sesi_1 = %s OR kapita_id_sesi_2 = %s)
-        """, (p_church_gkode, p_kapita_id, p_kapita_id))
+            SELECT COUNT(*) as count FROM (
+                SELECT ugereja AS gkode, ukapita_sesi_1 AS idkapita FROM users
+                UNION ALL
+                SELECT ugereja AS gkode, ukapita_sesi_2 AS idkapita FROM users
+                UNION ALL
+                SELECT church_gkode AS gkode, kapita_id_sesi_1 AS idkapita FROM registrations
+                UNION ALL
+                SELECT church_gkode AS gkode, kapita_id_sesi_2 AS idkapita FROM registrations
+            ) expanded
+            WHERE gkode = %s AND idkapita = %s
+        """, (p_church_gkode, p_kapita_id))
         v_row = v_cursor.fetchone()
         return v_row['count'] if v_row else 0
     except Exception as e:

@@ -384,13 +384,20 @@ def ctrl_create_registration(p_payload):
     if v_quota_2 is None:
         raise ServiceException(status_code=400, detail=f"Kuota untuk gereja '{v_church['name']}' kapita '{v_kapita_2['namakapita']}' belum diatur.")
 
-    v_errors = []
-    if v_eff_left_1 <= 0:
-        v_errors.append(f"Sesi 1 - Kapita '{v_kapita_1['namakapita']}' sudah penuh (kuota: {v_eff_kuota_1}, terdaftar: {v_quota_1['registered']})")
-    if v_eff_left_2 <= 0:
-        v_errors.append(f"Sesi 2 - Kapita '{v_kapita_2['namakapita']}' sudah penuh (kuota: {v_eff_kuota_2}, terdaftar: {v_quota_2['registered']})")
-    if v_errors:
-        raise ServiceException(status_code=400, detail="; ".join(v_errors))
+    if p_payload.kapita_id_sesi_1 == p_payload.kapita_id_sesi_2:
+        if v_eff_left_1 < 2:
+            raise ServiceException(
+                status_code=400,
+                detail=f"Kapita '{v_kapita_1['namakapita']}' tidak cukup untuk mendaftar 2 sesi sekaligus (sisa kuota: {v_eff_left_1}, dibutuhkan: 2)."
+            )
+    else:
+        v_errors = []
+        if v_eff_left_1 <= 0:
+            v_errors.append(f"Sesi 1 - Kapita '{v_kapita_1['namakapita']}' sudah penuh (kuota: {v_eff_kuota_1}, terdaftar: {v_quota_1['registered']})")
+        if v_eff_left_2 <= 0:
+            v_errors.append(f"Sesi 2 - Kapita '{v_kapita_2['namakapita']}' sudah penuh (kuota: {v_eff_kuota_2}, terdaftar: {v_quota_2['registered']})")
+        if v_errors:
+            raise ServiceException(status_code=400, detail="; ".join(v_errors))
 
     v_existing = dao_get_registration_by_email(p_payload.email)
     if v_existing:
@@ -501,13 +508,20 @@ def ctrl_create_user(p_payload):
     if v_quota_2 is None:
         raise ServiceException(status_code=400, detail=f"Kuota untuk gereja '{v_church['name']}' kapita '{v_kapita_2['namakapita']}' belum diatur.")
 
-    v_errors = []
-    if v_eff_left_1 <= 0:
-        v_errors.append(f"Sesi 1 - Kapita '{v_kapita_1['namakapita']}' sudah penuh (kuota: {v_eff_kuota_1}, terdaftar: {v_quota_1['registered']})")
-    if v_eff_left_2 <= 0:
-        v_errors.append(f"Sesi 2 - Kapita '{v_kapita_2['namakapita']}' sudah penuh (kuota: {v_eff_kuota_2}, terdaftar: {v_quota_2['registered']})")
-    if v_errors:
-        raise ServiceException(status_code=400, detail="; ".join(v_errors))
+    if p_payload.ukapita_sesi_1 == p_payload.ukapita_sesi_2:
+        if v_eff_left_1 < 2:
+            raise ServiceException(
+                status_code=400,
+                detail=f"Kapita '{v_kapita_1['namakapita']}' tidak cukup untuk mendaftar 2 sesi sekaligus (sisa kuota: {v_eff_left_1}, dibutuhkan: 2)."
+            )
+    else:
+        v_errors = []
+        if v_eff_left_1 <= 0:
+            v_errors.append(f"Sesi 1 - Kapita '{v_kapita_1['namakapita']}' sudah penuh (kuota: {v_eff_kuota_1}, terdaftar: {v_quota_1['registered']})")
+        if v_eff_left_2 <= 0:
+            v_errors.append(f"Sesi 2 - Kapita '{v_kapita_2['namakapita']}' sudah penuh (kuota: {v_eff_kuota_2}, terdaftar: {v_quota_2['registered']})")
+        if v_errors:
+            raise ServiceException(status_code=400, detail="; ".join(v_errors))
 
     v_new_id = dao_create_user(
         p_full_name=p_payload.full_name, p_email=p_payload.email,
