@@ -388,7 +388,7 @@ def ctrl_create_registration(p_payload):
         if v_eff_left_1 < 2:
             raise ServiceException(
                 status_code=400,
-                detail=f"Kapita '{v_kapita_1['namakapita']}' tidak cukup untuk mendaftar 2 sesi sekaligus (sisa kuota: {v_eff_left_1}, dibutuhkan: 2)."
+                detail=f"Kapita '{v_kapita_1['namakapita']}' tidak cukup untuk mendaftar 2 sesi sekaligus (sisa kuota: {v_eff_left_1})."
             )
     else:
         v_errors = []
@@ -400,8 +400,8 @@ def ctrl_create_registration(p_payload):
             raise ServiceException(status_code=400, detail="; ".join(v_errors))
 
     v_existing = dao_get_registration_by_email(p_payload.email)
-    if v_existing:
-        raise ServiceException(status_code=409, detail=f"Email '{p_payload.email}' sudah terdaftar.")
+    # if v_existing:
+        # raise ServiceException(status_code=409, detail=f"Email '{p_payload.email}' sudah terdaftar.")
 
     v_new_id = dao_create_registration(
         p_full_name=p_payload.full_name, p_email=p_payload.email,
@@ -442,8 +442,8 @@ def ctrl_get_registration_by_id(p_reg_id):
 @validasi
 def ctrl_check_registration_by_email(p_email):
     v_reg = dao_get_registration_by_email(p_email)
-    if v_reg:
-        return {"email": p_email, "is_registered": True, "message": f"Email '{p_email}' sudah terdaftar atas nama {v_reg['full_name']}."}
+    # if v_reg:
+    #     return {"email": p_email, "is_registered": True, "message": f"Email '{p_email}' sudah terdaftar atas nama {v_reg['full_name']}."}
     return {"email": p_email, "is_registered": False, "message": f"Email '{p_email}' belum terdaftar."}
 
 
@@ -454,8 +454,8 @@ def ctrl_update_registration(p_reg_id, p_payload):
         raise ServiceException(status_code=404, detail=f"Pendaftaran dengan ID {p_reg_id} tidak ditemukan.")
 
     v_existing = dao_get_registration_by_email(p_payload.email)
-    if v_existing and v_existing["id"] != p_reg_id:
-        raise ServiceException(status_code=409, detail=f"Email '{p_payload.email}' sudah terdaftar di pendaftaran lain.")
+    # if v_existing and v_existing["id"] != p_reg_id:
+    #     raise ServiceException(status_code=409, detail=f"Email '{p_payload.email}' sudah terdaftar di pendaftaran lain.")
 
     dao_update_registration(
         p_id=p_reg_id, p_full_name=p_payload.full_name, p_email=p_payload.email,
@@ -512,7 +512,7 @@ def ctrl_create_user(p_payload):
         if v_eff_left_1 < 2:
             raise ServiceException(
                 status_code=400,
-                detail=f"Kapita '{v_kapita_1['namakapita']}' tidak cukup untuk mendaftar 2 sesi sekaligus (sisa kuota: {v_eff_left_1}, dibutuhkan: 2)."
+                detail=f"Kapita '{v_kapita_1['namakapita']}' tidak cukup untuk mendaftar 2 sesi sekaligus (sisa kuota: {v_eff_left_1})."
             )
     else:
         v_errors = []
