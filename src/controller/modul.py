@@ -396,7 +396,7 @@ def ctrl_create_registration(p_payload):
     if v_existing:
         raise ServiceException(status_code=409, detail=f"Email '{p_payload.email}' sudah terdaftar.")
 
-    v_new_id = dao_create_user(
+    v_new_id = dao_create_registration(
         p_full_name=p_payload.full_name, p_email=p_payload.email,
         p_phone=p_payload.phone, p_church_gkode=p_payload.church_gkode,
         p_kapita_id_sesi_1=p_payload.kapita_id_sesi_1, p_kapita_id_sesi_2=p_payload.kapita_id_sesi_2,
