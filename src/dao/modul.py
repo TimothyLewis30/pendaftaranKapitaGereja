@@ -477,7 +477,7 @@ def dao_create_registration(p_full_name, p_email, p_phone, p_church_gkode, p_kap
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
-            INSERT INTO users (full_name, email, phone, church_gkode, kapita_id_sesi_1, kapita_id_sesi_2)
+            INSERT INTO users (unama, uemail, uphone, ugereja, ukapita_sesi_1, ukapita_sesi_2)
             VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
         """, (p_full_name, p_email, p_phone, p_church_gkode, p_kapita_id_sesi_1, p_kapita_id_sesi_2))
         v_new_id = v_cursor.fetchone()["id"]
