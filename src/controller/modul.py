@@ -404,7 +404,7 @@ def ctrl_create_registration(p_payload):
     v_saved = dao_get_registration_by_id(v_new_id)
 
     return {
-        "id": v_saved["id"],
+        "id": v_saved["uid"],
         "full_name": v_saved["full_name"], "email": v_saved["email"],
         "phone": v_saved["phone"],
         "church_gkode": v_saved["church_gkode"], "church_name": v_saved["church_name"],
