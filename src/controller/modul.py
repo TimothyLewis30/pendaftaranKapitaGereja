@@ -402,6 +402,8 @@ def ctrl_create_registration(p_payload):
         p_kapita_id_sesi_1=p_payload.kapita_id_sesi_1, p_kapita_id_sesi_2=p_payload.kapita_id_sesi_2,
     )
     v_saved = dao_get_registration_by_id(v_new_id)
+    if not v_saved:
+        raise ServiceException(status_code=500, detail="Gagal mengambil data pendaftaran setelah disimpan.")
 
     return {
         "id": v_saved["uid"],
@@ -420,7 +422,7 @@ def ctrl_get_registration_by_id(p_reg_id):
     if not v_reg:
         raise ServiceException(status_code=404, detail=f"Pendaftaran dengan ID {p_reg_id} tidak ditemukan.")
     return {
-        "id": v_reg["id"],
+        "id": v_reg["uid"],
         "full_name": v_reg["full_name"], "email": v_reg["email"],
         "phone": v_reg["phone"],
         "church_gkode": v_reg["church_gkode"], "church_name": v_reg["church_name"],

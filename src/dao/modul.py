@@ -497,16 +497,16 @@ def dao_get_registration_by_id(p_reg_id):
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
-            SELECT r.id, r.full_name, r.email, r.phone,
-                   r.church_gkode, g.gkode, g.gnama AS church_name,
-                   r.kapita_id_sesi_1, k1.namakapita AS kapita_name_sesi_1,
-                   r.kapita_id_sesi_2, k2.namakapita AS kapita_name_sesi_2,
-                   r.registered_at
-            FROM registrations r
-            JOIN gereja g ON g.gkode = r.church_gkode
-            JOIN kapita k1 ON k1.idkapita = r.kapita_id_sesi_1
-            JOIN kapita k2 ON k2.idkapita = r.kapita_id_sesi_2
-            WHERE r.id = %s
+            SELECT u.uid, u.unama AS full_name, u.uemail AS email, u.uphone AS phone,
+                   u.ugereja AS church_gkode, g.gkode, g.gnama AS church_name,
+                   u.ukapita_sesi_1, k1.namakapita AS kapita_name_sesi_1,
+                   u.ukapita_sesi_2, k2.namakapita AS kapita_name_sesi_2,
+                   u.uregistered_at AS registered_at
+            FROM users u
+            LEFT JOIN gereja g ON g.gkode = u.ugereja
+            LEFT JOIN kapita k1 ON k1.idkapita = u.ukapita_sesi_1
+            LEFT JOIN kapita k2 ON k2.idkapita = u.ukapita_sesi_2
+            WHERE u.uid = %s
         """, (p_reg_id,))
         v_row = v_cursor.fetchone()
         return dict(v_row) if v_row else None
@@ -524,16 +524,16 @@ def dao_get_registration_by_email(p_email):
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
-            SELECT r.id, r.full_name, r.email, r.phone,
-                   r.church_gkode, g.gkode, g.gnama AS church_name,
-                   r.kapita_id_sesi_1, k1.namakapita AS kapita_name_sesi_1,
-                   r.kapita_id_sesi_2, k2.namakapita AS kapita_name_sesi_2,
-                   r.registered_at
-            FROM registrations r
-            JOIN gereja g ON g.gkode = r.church_gkode
-            JOIN kapita k1 ON k1.idkapita = r.kapita_id_sesi_1
-            JOIN kapita k2 ON k2.idkapita = r.kapita_id_sesi_2
-            WHERE r.email = %s
+            SELECT u.uid, u.unama AS full_name, u.uemail AS email, u.uphone AS phone,
+                   u.ugereja AS church_gkode, g.gkode, g.gnama AS church_name,
+                   u.ukapita_sesi_1, k1.namakapita AS kapita_name_sesi_1,
+                   u.ukapita_sesi_2, k2.namakapita AS kapita_name_sesi_2,
+                   u.uregistered_at AS registered_at
+            FROM users u
+            JOIN gereja g ON g.gkode = u.ugereja
+            JOIN kapita k1 ON k1.idkapita = u.ukapita_sesi_1
+            JOIN kapita k2 ON k2.idkapita = u.ukapita_sesi_2
+            WHERE u.uemail = %s
         """, (p_email,))
         v_row = v_cursor.fetchone()
         return dict(v_row) if v_row else None
