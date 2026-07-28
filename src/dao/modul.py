@@ -480,7 +480,7 @@ def dao_create_registration(p_full_name, p_email, p_phone, p_church_gkode, p_kap
             INSERT INTO users (unama, uemail, uphone, ugereja, ukapita_sesi_1, ukapita_sesi_2)
             VALUES (%s, %s, %s, %s, %s, %s) RETURNING uid
         """, (p_full_name, p_email, p_phone, p_church_gkode, p_kapita_id_sesi_1, p_kapita_id_sesi_2))
-        v_new_id = v_cursor.fetchone()["id"]
+        v_new_id = v_cursor.fetchone()["uid"]
         v_conn.commit()
         return v_new_id
     except Exception as e:
