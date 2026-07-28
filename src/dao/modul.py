@@ -499,8 +499,8 @@ def dao_get_registration_by_id(p_reg_id):
         v_cursor.execute("""
             SELECT u.uid, u.unama AS full_name, u.uemail AS email, u.uphone AS phone,
                    u.ugereja AS church_gkode, g.gkode, g.gnama AS church_name,
-                   u.ukapita_sesi_1, k1.namakapita AS kapita_name_sesi_1,
-                   u.ukapita_sesi_2, k2.namakapita AS kapita_name_sesi_2,
+                   u.ukapita_sesi_1 AS kapita_id_sesi_1, k1.namakapita AS kapita_name_sesi_1,
+                   u.ukapita_sesi_2 AS kapita_id_sesi_2, k2.namakapita AS kapita_name_sesi_2,
                    u.uregistered_at AS registered_at
             FROM users u
             LEFT JOIN gereja g ON g.gkode = u.ugereja
@@ -526,13 +526,13 @@ def dao_get_registration_by_email(p_email):
         v_cursor.execute("""
             SELECT u.uid, u.unama AS full_name, u.uemail AS email, u.uphone AS phone,
                    u.ugereja AS church_gkode, g.gkode, g.gnama AS church_name,
-                   u.ukapita_sesi_1, k1.namakapita AS kapita_name_sesi_1,
-                   u.ukapita_sesi_2, k2.namakapita AS kapita_name_sesi_2,
+                   u.ukapita_sesi_1 AS kapita_id_sesi_1, k1.namakapita AS kapita_name_sesi_1,
+                   u.ukapita_sesi_2 AS kapita_id_sesi_2, k2.namakapita AS kapita_name_sesi_2,
                    u.uregistered_at AS registered_at
             FROM users u
-            JOIN gereja g ON g.gkode = u.ugereja
-            JOIN kapita k1 ON k1.idkapita = u.ukapita_sesi_1
-            JOIN kapita k2 ON k2.idkapita = u.ukapita_sesi_2
+            LEFT JOIN gereja g ON g.gkode = u.ugereja
+            LEFT JOIN kapita k1 ON k1.idkapita = u.ukapita_sesi_1
+            LEFT JOIN kapita k2 ON k2.idkapita = u.ukapita_sesi_2
             WHERE u.uemail = %s
         """, (p_email,))
         v_row = v_cursor.fetchone()
