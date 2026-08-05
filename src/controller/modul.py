@@ -602,3 +602,27 @@ def ctrl_delete_user(p_uid):
     if not v_user:
         raise ServiceException(status_code=404, detail=f"User dengan ID {p_uid} tidak ditemukan.")
     return dao_delete_user(p_uid)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CETAK EXCEL
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@validasi
+def ctrl_export_excel_peserta(p_pilihan, p_sesi_1=None, p_sesi_2=None, p_gkode=None):
+    try:
+        p_pilihan = int(p_pilihan)
+    except (ValueError, TypeError):
+        raise ServiceException(status_code=400, detail="Pilihan cetak excel harus berupa angka (1, 2, 3, atau 4).")
+
+    if p_pilihan not in (1, 2, 3, 4):
+        raise ServiceException(status_code=400, detail="Pilihan cetak excel tidak valid. Opsi yang tersedia: 1, 2, 3, atau 4.")
+
+    try:
+        from src.others.cetakExcel import generate_excel_peserta
+        return generate_excel_peserta(p_pilihan, p_sesi_1, p_sesi_2, p_gkode)
+    except ServiceException:
+        raise
+    except Exception as e:
+        raise ServiceException(status_code=500, detail=f"Gagal membuat file Excel: {str(e)}")
+

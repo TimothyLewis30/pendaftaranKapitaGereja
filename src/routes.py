@@ -2,7 +2,7 @@
 routes.py
 Semua routing endpoint (gabungan).
 """
-from flask import request
+from flask import request, Response
 from flask_restful import Resource
 from pydantic import ValidationError
 from src.controller.modul import (
@@ -18,12 +18,13 @@ from src.controller.modul import (
     ctrl_check_registration_by_email, ctrl_update_registration,
     ctrl_delete_registration,
     ctrl_create_user, ctrl_get_all_users, ctrl_get_user_by_id,
-    ctrl_update_user, ctrl_delete_user,
+    ctrl_update_user, ctrl_delete_user, ctrl_export_excel_peserta,
 )
 from src.models.admin_model import AdminCreate, AdminLogin
 from src.models.church_model import ChurchCreate, ChurchUpdate, ChurchKapitaQuotaCreate
 from src.models.kapita_model import KapitaCreate
-from src.models.user_model import RegistrationCreate, UserCreate
+from src.models.user_model import RegistrationCreate, UserCreate, CetakExcelRequest
+from src.validasi.validate import validasi
 from src.utils import responseJson
 
 
@@ -284,6 +285,45 @@ class PingResource(Resource):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# CETAK EXCEL
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class CetakExcelResource(Resource):
+    @validasi
+    def get(self):
+        v_pilihan = request.args.get("pilihan", type=int, default=1)
+        v_sesi_1 = request.args.get("sesi_1")
+        v_sesi_2 = request.args.get("sesi_2")
+        v_gkode = request.args.get("gkode")
+
+        v_excel_bytes, v_filename = ctrl_export_excel_peserta(v_pilihan, v_sesi_1, v_sesi_2, v_gkode)
+
+        return Response(
+            v_excel_bytes,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={v_filename}"}
+        )
+
+    @validasi
+    def post(self):
+        try:
+            v_json = request.get_json() or {}
+            v_payload = CetakExcelRequest(**v_json)
+        except ValidationError as e:
+            return responseJson(400, False, "Validasi data gagal.", e.errors()), 400
+
+        v_excel_bytes, v_filename = ctrl_export_excel_peserta(
+            v_payload.pilihan, v_payload.sesi_1, v_payload.sesi_2, v_payload.gkode
+        )
+
+        return Response(
+            v_excel_bytes,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={v_filename}"}
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # REGISTER ROUTES
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -306,3 +346,6 @@ def registerRoutes(api):
 
     api.add_resource(UserListResource,                  "/api/users",                                                       endpoint="users")
     api.add_resource(UserDetailResource,                "/api/users/<int:p_uid>",                                           endpoint="user-detail")
+
+    api.add_resource(CetakExcelResource,                "/api/cetak-excel",                                                 endpoint="cetak-excel")
+

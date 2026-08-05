@@ -3,11 +3,11 @@ from typing import Optional, List
 
 
 class ChurchCreate(BaseModel):
-    name:  str = Field(..., min_length=1, max_length=255, example="GKPI Resort Menteng")
+    name:  str = Field(..., min_length=1, max_length=255)
 
 
 class ChurchUpdate(BaseModel):
-    name:  str = Field(..., min_length=1, max_length=255, example="GKPI Resort Menteng")
+    name:  str = Field(..., min_length=1, max_length=255)
 
 
 class ChurchResponse(BaseModel):
@@ -23,8 +23,8 @@ class ChurchQuotaResponse(BaseModel):
 
 
 class ChurchKapitaQuotaCreate(BaseModel):
-    kapita_id:  int = Field(..., gt=0, example=1)
-    kuota:      int = Field(..., ge=0, example=10)
+    kapita_id:  int = Field(..., gt=0)
+    kuota:      int = Field(..., ge=0)
 
 
 class ChurchKapitaQuotaResponse(BaseModel):

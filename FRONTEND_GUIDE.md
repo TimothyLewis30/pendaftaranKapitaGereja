@@ -205,9 +205,14 @@ Semua response menggunakan format:
 | GET    | `/api/registrations/{id}`          | Detail pendaftaran              |
 | PUT    | `/api/registrations/{id}`          | Update pendaftaran              |
 | DELETE | `/api/registrations/{id}`          | Hapus pendaftaran               |
-| GET    | `/api/registrations/check/{email}` | Cek apakah email sudah terdaftar|
+#### Cetak Excel
+
+| Method | Endpoint                           | Keterangan                      |
+| ------ | ---------------------------------- | ------------------------------- |
+| POST / GET | `/api/cetak-excel`             | Cetak / Export file Excel data peserta |
 
 ---
+
 
 ### ADMIN (Butuh Login + X-Admin-ID)
 
@@ -359,8 +364,63 @@ console.log(data);
 | `namakapita` | string | Nama kapita                 |
 
 ### Quota
-
 | Field      | Tipe   | Keterangan                  |
 | ---------- | ------ | --------------------------- |
 | `kapita_id`| int    | ID kapita                   |
 | `kuota`    | int    | Jumlah kuota                |
+
+### Cetak Excel Request
+
+| Field     | Tipe   | Keterangan                                                               |
+| --------- | ------ | ------------------------------------------------------------------------ |
+| `pilihan` | int    | **Wajib**. 1 (by ID), 2 (by Gereja), 3 (by Kapita), 4 (Sesi 1 & Sesi 2)  |
+| `sesi_1`  | int    | Opsional. Filter ID kapita sesi 1                                        |
+| `sesi_2`  | int    | Opsional. Filter ID kapita sesi 2                                        |
+| `gkode`   | string | Opsional. Filter kode gereja                                             |
+
+---
+
+### 5. Download Excel Data Peserta (Frontend JavaScript)
+
+```javascript
+// Function untuk men-download file Excel data peserta
+async function downloadExcelPeserta(pilihan = 1) {
+  const body = { pilihan: pilihan };
+  const headers = generateHeaders(body); // Menghasilkan X-Salt dan X-Signature
+
+  try {
+    const res = await fetch('https://pendaftarankapitagereja.onrender.com/api/cetak-excel', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const errorJson = await res.json();
+      console.error('Gagal cetak excel:', errorJson);
+      alert(errorJson.message || 'Gagal mendownload file Excel.');
+      return;
+    }
+
+    // Ambil binary blob dan trigger download browser
+    const blob = await res.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `Data_Peserta_Pilihan_${pilihan}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (err) {
+    console.error('Error saat download excel:', err);
+  }
+}
+
+// Contoh pemanggilan:
+// downloadExcelPeserta(1); // 1. Order by ID
+// downloadExcelPeserta(2); // 2. Order by Gereja
+// downloadExcelPeserta(3); // 3. Order by Kapita
+// downloadExcelPeserta(4); // 4. Sesi 1 & Sesi 2
+```
+

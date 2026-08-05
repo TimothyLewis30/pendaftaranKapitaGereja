@@ -53,32 +53,28 @@ CREATE TABLE gereja_kapita (
 -- 5. TABEL REGISTRATIONS (pendaftaran via form admin)
 -- ============================================================
 CREATE TABLE registrations (
-    id             SERIAL PRIMARY KEY,
-    full_name      TEXT NOT NULL,
-    email          TEXT NOT NULL,
-    phone          TEXT NOT NULL,
-    birth_date     DATE NOT NULL,
-    address        TEXT NOT NULL,
-    church_gkode   TEXT NOT NULL REFERENCES gereja(gkode) ON DELETE CASCADE,
-    kapita_id      INTEGER NOT NULL REFERENCES kapita(idkapita) ON DELETE CASCADE,
-    notes          TEXT,
-    registered_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id                 SERIAL PRIMARY KEY,
+    full_name          TEXT NOT NULL,
+    email              TEXT NOT NULL,
+    phone              TEXT NOT NULL,
+    church_gkode       TEXT NOT NULL REFERENCES gereja(gkode) ON DELETE CASCADE,
+    kapita_id_sesi_1   INTEGER NOT NULL REFERENCES kapita(idkapita) ON DELETE CASCADE,
+    kapita_id_sesi_2   INTEGER NOT NULL REFERENCES kapita(idkapita) ON DELETE CASCADE,
+    registered_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================================
 -- 6. TABEL USERS (pendaftaran via form publik)
 -- ============================================================
 CREATE TABLE users (
-    uid             SERIAL PRIMARY KEY,
-    unama           TEXT NOT NULL,
-    uemail          TEXT NOT NULL,
-    uphone          TEXT NOT NULL,
-    ubirth_date     DATE NOT NULL,
-    uaddress        TEXT NOT NULL,
-    ugereja         TEXT NOT NULL REFERENCES gereja(gkode) ON DELETE CASCADE,
-    ukapita         INTEGER NOT NULL REFERENCES kapita(idkapita) ON DELETE CASCADE,
-    unotes          TEXT,
-    uregistered_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    uid                 SERIAL PRIMARY KEY,
+    unama               TEXT NOT NULL,
+    uemail              TEXT NOT NULL,
+    uphone              TEXT NOT NULL,
+    ugereja             TEXT NOT NULL REFERENCES gereja(gkode) ON DELETE CASCADE,
+    ukapita_sesi_1      INTEGER NOT NULL REFERENCES kapita(idkapita) ON DELETE CASCADE,
+    ukapita_sesi_2      INTEGER NOT NULL REFERENCES kapita(idkapita) ON DELETE CASCADE,
+    uregistered_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================================

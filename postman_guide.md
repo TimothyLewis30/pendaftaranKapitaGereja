@@ -456,3 +456,32 @@ Operasi **CUD** (Create, Update, Delete) pada data **Gereja**, **Kapita**, dan *
 | `SuperAdmin`  | Boleh semua operasi: CRUD Gereja, CRUD Kapita, CRUD Admin |
 | `Admin`       | Boleh CRUD Gereja dan CRUD Kapita                       |
 | `NULL`        | Tidak boleh operasi CUD (hanya bisa login)              |
+
+---
+
+## 21. Cetak / Export Excel Data Peserta
+
+Mencetak data peserta ke dalam format file Excel (.xlsx).
+
+- **Method**: `POST` atau `GET`
+- **Endpoint**: `/api/cetak-excel`
+- **Payload Request (POST JSON)**:
+  ```json
+  {
+      "pilihan": 1
+  }
+  ```
+
+### Opsi Pilihan (`pilihan`):
+- `1`: Cetak Semua data peserta order by ID Peserta
+- `2`: Cetak Data Peserta order by Gereja
+- `3`: Cetak Data Peserta order by Kapita
+- `4`: Cetak Data Peserta pada Sesi 1 dan Sesi 2
+
+### Filter Opsional (JSON Body atau Query Param):
+- `sesi_1` (int): ID Kapita Sesi 1
+- `sesi_2` (int): ID Kapita Sesi 2
+- `gkode` (string): Kode Gereja
+
+- **Response**: File binary Excel `.xlsx` (`Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`)
+

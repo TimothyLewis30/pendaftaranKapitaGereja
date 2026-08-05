@@ -3,7 +3,7 @@ from typing import Optional
 
 
 class KapitaCreate(BaseModel):
-    namakapita: str = Field(..., min_length=1, max_length=20, example="Kapita 1")
+    namakapita: str = Field(..., min_length=1, max_length=20)
 
 
 class KapitaResponse(BaseModel):

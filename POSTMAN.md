@@ -842,3 +842,41 @@ Response (200):
   "results": []
 }
 ```
+
+---
+
+### 28. Cetak / Export Excel Data Peserta
+
+**GET** / **POST** `/api/cetak-excel`
+
+Metode 1: **GET** dengan Query Parameter:
+- `pilihan`: `1`, `2`, `3`, atau `4`
+  - `1`: Semua data peserta order by ID Peserta
+  - `2`: Data peserta order by Gereja
+  - `3`: Data peserta order by Kapita
+  - `4`: Data peserta pada Sesi 1 dan Sesi 2
+- `sesi_1` (opsional): Filter ID Kapita Sesi 1
+- `sesi_2` (opsional): Filter ID Kapita Sesi 2
+- `gkode` (opsional): Filter Kode Gereja
+
+Contoh GET:
+```
+GET /api/cetak-excel?pilihan=1
+GET /api/cetak-excel?pilihan=2
+GET /api/cetak-excel?pilihan=3
+GET /api/cetak-excel?pilihan=4&sesi_1=1&sesi_2=2
+```
+
+Metode 2: **POST** dengan Body JSON:
+```json
+{
+  "pilihan": 1,
+  "sesi_1": 1,
+  "sesi_2": 2,
+  "gkode": "GKY001"
+}
+```
+
+Response:
+File biner Excel `.xlsx` (`Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`) dengan header `Content-Disposition: attachment; filename=Data_Peserta_...xlsx`.
+

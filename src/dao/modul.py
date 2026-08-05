@@ -748,3 +748,84 @@ def dao_delete_user(p_uid):
     finally:
         if v_cursor:
             v_cursor.close()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CETAK EXCEL DAO
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def dao_get_peserta_for_excel(p_pilihan, p_sesi_1=None, p_sesi_2=None, p_gkode=None):
+    v_cursor = None
+    try:
+        v_conn = get_connection()
+        v_cursor = v_conn.cursor()
+
+        v_base_query = """
+            SELECT * FROM (
+                SELECT u.uid AS id, u.unama AS full_name, u.uemail AS email, u.uphone AS phone,
+                       u.ugereja AS church_gkode, g.gnama AS church_name,
+                       u.ukapita_sesi_1 AS kapita_id_sesi_1, k1.namakapita AS kapita_name_sesi_1,
+                       u.ukapita_sesi_2 AS kapita_id_sesi_2, k2.namakapita AS kapita_name_sesi_2,
+                       u.uregistered_at AS registered_at
+                FROM users u
+                LEFT JOIN gereja g ON g.gkode = u.ugereja
+                LEFT JOIN kapita k1 ON k1.idkapita = u.ukapita_sesi_1
+                LEFT JOIN kapita k2 ON k2.idkapita = u.ukapita_sesi_2
+
+                UNION ALL
+
+                SELECT r.id AS id, r.full_name, r.email, r.phone,
+                       r.church_gkode, g.gnama AS church_name,
+                       r.kapita_id_sesi_1, k1.namakapita AS kapita_name_sesi_1,
+                       r.kapita_id_sesi_2, k2.namakapita AS kapita_name_sesi_2,
+                       r.registered_at
+                FROM registrations r
+                LEFT JOIN gereja g ON g.gkode = r.church_gkode
+                LEFT JOIN kapita k1 ON k1.idkapita = r.kapita_id_sesi_1
+                LEFT JOIN kapita k2 ON k2.idkapita = r.kapita_id_sesi_2
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM users u2 WHERE u2.uemail = r.email
+                )
+            ) p
+        """
+
+        v_conditions = []
+        v_params = []
+
+        if p_gkode:
+            v_conditions.append("p.church_gkode = %s")
+            v_params.append(p_gkode)
+
+        if p_sesi_1 is not None and str(p_sesi_1).strip() != "":
+            v_conditions.append("p.kapita_id_sesi_1 = %s")
+            v_params.append(int(p_sesi_1))
+
+        if p_sesi_2 is not None and str(p_sesi_2).strip() != "":
+            v_conditions.append("p.kapita_id_sesi_2 = %s")
+            v_params.append(int(p_sesi_2))
+
+        v_where_clause = ""
+        if v_conditions:
+            v_where_clause = " WHERE " + " AND ".join(v_conditions)
+
+        if p_pilihan == 1:
+            v_order_by = " ORDER BY p.id ASC"
+        elif p_pilihan == 2:
+            v_order_by = " ORDER BY p.church_name ASC, p.full_name ASC, p.id ASC"
+        elif p_pilihan == 3:
+            v_order_by = " ORDER BY p.kapita_name_sesi_1 ASC, p.kapita_name_sesi_2 ASC, p.full_name ASC, p.id ASC"
+        elif p_pilihan == 4:
+            v_order_by = " ORDER BY p.kapita_name_sesi_1 ASC, p.kapita_name_sesi_2 ASC, p.full_name ASC, p.id ASC"
+        else:
+            v_order_by = " ORDER BY p.id ASC"
+
+        v_final_query = v_base_query + v_where_clause + v_order_by
+        v_cursor.execute(v_final_query, tuple(v_params))
+        return [dict(row) for row in v_cursor.fetchall()]
+    except Exception as e:
+        logger.error("dao_get_peserta_for_excel: %s", str(e))
+        raise
+    finally:
+        if v_cursor:
+            v_cursor.close()
+

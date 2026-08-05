@@ -34,7 +34,13 @@ def validasi(fn):
                 status_code=401, detail="Unauthorized: Invalid or missing request API key")
 
         if request.method == "GET":
-            v_data = request.args.to_dict(flat=True)
+            v_raw_args = request.args.to_dict(flat=True)
+            v_data = {}
+            for k, v in v_raw_args.items():
+                if isinstance(v, str) and v.isdigit():
+                    v_data[k] = int(v)
+                else:
+                    v_data[k] = v
         elif request.content_type and request.content_type.startswith("multipart/form-data"):
             v_data = request.form.to_dict(flat=True)
         else:

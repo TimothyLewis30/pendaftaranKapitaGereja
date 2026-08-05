@@ -94,6 +94,53 @@ class ApiClient:
                     "message": f"Non-JSON response ({v_resp.status_code}): {v_resp.text[:500]}",
                     "results": []}
 
+    def _request_file(self, p_method: str, p_path: str, p_json_body=None, p_params=None, p_output_path: str = None) -> dict:
+        v_url = f"{self.v_base_url}{p_path}"
+        if p_method == "GET" and p_params:
+            v_data = p_params
+        else:
+            v_data = p_json_body or {}
+
+        v_headers = self._build_headers(v_data)
+
+        v_resp = requests.request(
+            method=p_method,
+            url=v_url,
+            json=v_data if p_method != "GET" else None,
+            params=p_params if p_method == "GET" else None,
+            headers=v_headers,
+            timeout=30,
+        )
+
+        if v_resp.status_code == 200:
+            v_cd = v_resp.headers.get("Content-Disposition", "")
+            v_filename = None
+            if "filename=" in v_cd:
+                v_filename = v_cd.split("filename=")[-1].strip('"\'')
+
+            v_save_path = p_output_path or v_filename or "downloaded_file.xlsx"
+
+            with open(v_save_path, "wb") as v_f:
+                v_f.write(v_resp.content)
+
+            return {
+                "code": 200,
+                "status": True,
+                "message": f"File berhasil didownload dan disimpan ke: {v_save_path}",
+                "filename": v_save_path,
+                "size_bytes": len(v_resp.content),
+            }
+        else:
+            try:
+                return v_resp.json()
+            except Exception:
+                return {
+                    "code": v_resp.status_code,
+                    "status": False,
+                    "message": f"Download gagal ({v_resp.status_code}): {v_resp.text[:500]}",
+                    "results": [],
+                }
+
     # ── Auth ──────────────────────────────────────────────────
 
     def ping(self) -> dict:
@@ -254,6 +301,32 @@ class ApiClient:
 
     def delete_user(self, p_uid: int) -> dict:
         return self._request("DELETE", f"/api/users/{p_uid}")
+
+    # ── Cetak Excel ───────────────────────────────────────────
+
+    def cetak_excel(self, p_pilihan: int = 1, p_sesi_1: int = None, p_sesi_2: int = None,
+                    p_gkode: str = None, p_output_path: str = None) -> dict:
+        """
+        Download file Excel rekap peserta.
+        p_pilihan:
+          1 = Semua Peserta
+          2 = Peserta Per Sesi (membutuhkan p_sesi_1 dan/atau p_sesi_2)
+          3 = Peserta Per Gereja (membutuhkan p_gkode)
+          4 = Peserta Per Gereja & Sesi (membutuhkan p_gkode dan p_sesi_1/p_sesi_2)
+        """
+        v_body = {"pilihan": p_pilihan}
+        if p_sesi_1 is not None:
+            v_body["sesi_1"] = p_sesi_1
+        if p_sesi_2 is not None:
+            v_body["sesi_2"] = p_sesi_2
+        if p_gkode:
+            v_body["gkode"] = p_gkode
+
+        return self._request_file("POST", "/api/cetak-excel", p_json_body=v_body, p_output_path=p_output_path)
+
+    def download_excel(self, p_pilihan: int = 1, p_sesi_1: int = None, p_sesi_2: int = None,
+                       p_gkode: str = None, p_output_path: str = None) -> dict:
+        return self.cetak_excel(p_pilihan, p_sesi_1, p_sesi_2, p_gkode, p_output_path)
 
 
 if __name__ == "__main__":
