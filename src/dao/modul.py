@@ -9,6 +9,26 @@ logger = logging.getLogger(__name__)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# PING DAO
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def dao_ping():
+    v_cursor = None
+    try:
+        v_conn = get_connection()
+        v_cursor = v_conn.cursor()
+        v_cursor.execute("SELECT EXISTS (SELECT 1 FROM users LIMIT 1)")
+        v_result = v_cursor.fetchone()
+        return v_result
+    except Exception as e:
+        logger.error("dao_ping: %s", str(e))
+        raise
+    finally:
+        if v_cursor:
+            v_cursor.close()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # ADMIN DAO
 # ═══════════════════════════════════════════════════════════════════════════════
 

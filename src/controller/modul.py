@@ -5,6 +5,7 @@ Business logic untuk semua modul (gabungan).
 from src.utils.exceptions import ServiceException
 from src.validasi.validate import validasi, require_role
 from src.dao.modul import (
+    dao_ping,
     dao_create_admin, dao_get_all_admins, dao_get_admin_by_id,
     dao_get_admin_by_email, dao_get_admin_with_password_by_id,
     dao_update_admin, dao_delete_admin,
@@ -37,6 +38,14 @@ def _compute_effective_left(p_church_gkode, p_kapita_id):
     v_registered = v_quota["registered"]
     v_effective_left = v_effective_kuota - v_registered
     return v_effective_kuota, v_effective_left, v_quota
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PING
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def ctrl_ping():
+    return dao_ping()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -608,7 +617,6 @@ def ctrl_delete_user(p_uid):
 # CETAK EXCEL
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@validasi
 def ctrl_export_excel_peserta(p_pilihan, p_sesi_1=None, p_sesi_2=None, p_gkode=None):
     try:
         p_pilihan = int(p_pilihan)

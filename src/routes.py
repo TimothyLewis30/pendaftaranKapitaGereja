@@ -6,6 +6,7 @@ from flask import request, Response
 from flask_restful import Resource
 from pydantic import ValidationError
 from src.controller.modul import (
+    ctrl_ping,
     ctrl_admin_login, ctrl_create_admin, ctrl_get_all_admins,
     ctrl_get_admin_by_id, ctrl_update_admin, ctrl_delete_admin,
     ctrl_get_all_churches, ctrl_get_church_detail, ctrl_create_church,
@@ -281,7 +282,11 @@ class UserDetailResource(Resource):
 
 class PingResource(Resource):
     def get(self):
-        return responseJson(200, True, "Server is running.", [])
+        try:
+            ctrl_ping()
+            return responseJson(200, True, "Server is running. DB connected.", [])
+        except Exception as e:
+            return responseJson(503, False, f"Server is running but DB connection failed: {str(e)}", []), 503
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
