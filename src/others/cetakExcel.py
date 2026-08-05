@@ -94,7 +94,7 @@ def generate_excel_peserta(p_pilihan, p_sesi_1=None, p_sesi_2=None, p_gkode=None
     # Column Headers Required:
     # Nama, Email, NO TLP, Nama Gereja, Nama Kapita, Nama sesi 1, Nama Sesi 2, Register jam berapa
     v_headers = [
-        "No / ID",
+        "No",
         "Nama",
         "Email",
         "NO TLP",
@@ -116,7 +116,7 @@ def generate_excel_peserta(p_pilihan, p_sesi_1=None, p_sesi_2=None, p_gkode=None
         row += 1
         
         # ID / No
-        v_id_val = str(item.get('id', idx))
+        v_id_val = str(idx)
         
         # Nama
         v_nama = str(item.get('full_name') or '')
@@ -178,6 +178,7 @@ def generate_excel_peserta(p_pilihan, p_sesi_1=None, p_sesi_2=None, p_gkode=None
         # Update max column widths
         for c_idx, val in enumerate(row_values):
             col_widths[c_idx] = max(col_widths[c_idx], len(val))
+        idx += 1
 
     # Summary Row
     row += 1
