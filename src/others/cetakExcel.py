@@ -67,13 +67,13 @@ def generate_excel_peserta(p_pilihan, p_sesi_1=None, p_sesi_2=None, p_gkode=None
     # Determine report titles and filename based on pilihan
     if p_pilihan == 1:
         v_title = "LAPORAN DATA PESERTA (ORDER BY ID)"
-        v_filename = "Data_Peserta_OrderBy_ID.xlsx"
+        v_filename = "Data_Peserta_Berdasarkan_ID"
     elif p_pilihan == 2:
         v_title = "LAPORAN DATA PESERTA (ORDER BY GEREJA)"
-        v_filename = "Data_Peserta_OrderBy_Gereja.xlsx"
+        v_filename = "Data_Peserta_Berdasarkan_Gereja"
     elif p_pilihan == 3:
         v_title = "LAPORAN DATA PESERTA (ORDER BY KAPITA)"
-        v_filename = "Data_Peserta_OrderBy_Kapita.xlsx"
+        v_filename = "Data_Peserta_Berdasarkan_Kapita"
     elif p_pilihan == 4:
         v_title = "LAPORAN DATA PESERTA (SESI 1 & SESI 2)"
         v_filename = "Data_Peserta_Sesi1_Sesi2.xlsx"

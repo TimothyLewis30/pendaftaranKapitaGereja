@@ -324,7 +324,7 @@ class CetakExcelResource(Resource):
         return Response(
             v_excel_bytes,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename={v_filename}"}
+            headers={"Content-Disposition": f"attachment; filename={v_filename}.xlsx"}
         )
 
 
