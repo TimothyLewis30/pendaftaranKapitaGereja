@@ -260,17 +260,19 @@ def dao_delete_church(p_gkode):
 # GEREJA_KAPITA DAO (kuota per gereja per KAPITA)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def dao_set_church_kapita_quota(p_gkode, p_idkapita, p_kuota):
+def dao_set_church_kapita_quota(p_gkode, p_idkapita, p_kuota_sesi_1, p_kuota_sesi_2):
     v_cursor = None
     try:
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
-            INSERT INTO gereja_kapita (gkode, idkapita, kuota)
-            VALUES (%s, %s, %s)
-            ON CONFLICT (gkode, idkapita) DO UPDATE SET kuota = EXCLUDED.kuota
+            INSERT INTO gereja_kapita (gkode, idkapita, kuota_sesi_1, kuota_sesi_2)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (gkode, idkapita) DO UPDATE SET
+                kuota_sesi_1 = EXCLUDED.kuota_sesi_1,
+                kuota_sesi_2 = EXCLUDED.kuota_sesi_2
             RETURNING gkid
-        """, (p_gkode, p_idkapita, p_kuota))
+        """, (p_gkode, p_idkapita, p_kuota_sesi_1, p_kuota_sesi_2))
         v_result = v_cursor.fetchone()["gkid"]
         v_conn.commit()
         return v_result
@@ -288,33 +290,74 @@ def dao_get_church_kapita_quotas(p_gkode):
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
+            WITH participant_count AS (
+                SELECT COUNT(*) AS total FROM participant WHERE pgereja = %s
+            ),
+            few_churches AS (
+                SELECT COUNT(*) AS cnt FROM (
+                    SELECT g.gkode
+                    FROM gereja g
+                    LEFT JOIN participant p ON p.pgereja = g.gkode
+                    GROUP BY g.gkode
+                    HAVING COUNT(p.pid) < 4
+                ) t
+            ),
+            sesi_1 AS (
+                SELECT ugereja AS gkode, ukapita_sesi_1 AS idkapita FROM users
+                UNION ALL
+                SELECT church_gkode AS gkode, kapita_id_sesi_1 AS idkapita FROM registrations
+            ),
+            sesi_2 AS (
+                SELECT ugereja AS gkode, ukapita_sesi_2 AS idkapita FROM users
+                UNION ALL
+                SELECT church_gkode AS gkode, kapita_id_sesi_2 AS idkapita FROM registrations
+            )
             SELECT
-                gk.gkid        AS gkid,
-                gk.gkode       AS gkode,
-                gk.idkapita    AS idkapita,
-                k.namakapita   AS kapita_name,
-                gk.kuota       AS kuota,
-                COALESCE(r.reg_count, 0) AS registered,
-                gk.kuota - COALESCE(r.reg_count, 0) AS quota_left
+                gk.gkid             AS gkid,
+                gk.gkode            AS gkode,
+                gk.idkapita         AS idkapita,
+                k.namakapita        AS kapita_name,
+                gk.kuota_sesi_1     AS manual_kuota_sesi_1,
+                gk.kuota_sesi_2     AS manual_kuota_sesi_2,
+                COALESCE(r1.reg_count, 0) AS registered_sesi_1,
+                COALESCE(r2.reg_count, 0) AS registered_sesi_2,
+                CASE
+                    WHEN gk.idkapita IN (5, 6)
+                        THEN FLOOR(pc.total / 4) + CASE WHEN (pc.total % 4) IN (1, 2, 3) THEN 1 ELSE 0 END
+                    WHEN gk.idkapita IN (7, 8)
+                        THEN FLOOR(pc.total / 4) + CASE WHEN (pc.total % 4) = 3 THEN 1 ELSE 0 END
+                    ELSE 0
+                END + fc.cnt AS system_kuota
             FROM gereja_kapita gk
             JOIN kapita k ON k.idkapita = gk.idkapita
+            CROSS JOIN participant_count pc
+            CROSS JOIN few_churches fc
             LEFT JOIN (
                 SELECT gkode, idkapita, COUNT(*) AS reg_count
-                FROM (
-                    SELECT ugereja AS gkode, ukapita_sesi_1 AS idkapita FROM users
-                    UNION ALL
-                    SELECT ugereja AS gkode, ukapita_sesi_2 AS idkapita FROM users
-                    UNION ALL
-                    SELECT church_gkode AS gkode, kapita_id_sesi_1 AS idkapita FROM registrations
-                    UNION ALL
-                    SELECT church_gkode AS gkode, kapita_id_sesi_2 AS idkapita FROM registrations
-                ) expanded
+                FROM sesi_1
                 GROUP BY gkode, idkapita
-            ) r ON r.gkode = gk.gkode AND r.idkapita = gk.idkapita
+            ) r1 ON r1.gkode = gk.gkode AND r1.idkapita = gk.idkapita
+            LEFT JOIN (
+                SELECT gkode, idkapita, COUNT(*) AS reg_count
+                FROM sesi_2
+                GROUP BY gkode, idkapita
+            ) r2 ON r2.gkode = gk.gkode AND r2.idkapita = gk.idkapita
             WHERE gk.gkode = %s
             ORDER BY k.namakapita ASC
-        """, (p_gkode,))
-        return [dict(row) for row in v_cursor.fetchall()]
+        """, (p_gkode, p_gkode))
+        v_rows = []
+        for v_row in v_cursor.fetchall():
+            v_kuota_sesi_1 = max(v_row["manual_kuota_sesi_1"], v_row["system_kuota"])
+            v_kuota_sesi_2 = max(v_row["manual_kuota_sesi_2"], v_row["system_kuota"])
+            v_row["kuota_sesi_1"] = v_kuota_sesi_1
+            v_row["kuota_sesi_2"] = v_kuota_sesi_2
+            v_row["quota_left_sesi_1"] = v_kuota_sesi_1 - v_row["registered_sesi_1"]
+            v_row["quota_left_sesi_2"] = v_kuota_sesi_2 - v_row["registered_sesi_2"]
+            v_row.pop("manual_kuota_sesi_1", None)
+            v_row.pop("manual_kuota_sesi_2", None)
+            v_row.pop("system_kuota", None)
+            v_rows.append(v_row)
+        return v_rows
     except Exception as e:
         logger.error("dao_get_church_kapita_quotas: %s", str(e))
         raise
@@ -361,32 +404,71 @@ def dao_get_quota_by_church_and_kapita(p_gkode, p_idkapita):
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
         v_cursor.execute("""
+            WITH participant_count AS (
+                SELECT COUNT(*) AS total FROM participant WHERE pgereja = %s
+            ),
+            few_churches AS (
+                SELECT COUNT(*) AS cnt FROM (
+                    SELECT g.gkode
+                    FROM gereja g
+                    LEFT JOIN participant p ON p.pgereja = g.gkode
+                    GROUP BY g.gkode
+                    HAVING COUNT(p.pid) < 4
+                ) t
+            ),
+            sesi_1 AS (
+                SELECT ugereja AS gkode, ukapita_sesi_1 AS idkapita FROM users
+                UNION ALL
+                SELECT church_gkode AS gkode, kapita_id_sesi_1 AS idkapita FROM registrations
+            ),
+            sesi_2 AS (
+                SELECT ugereja AS gkode, ukapita_sesi_2 AS idkapita FROM users
+                UNION ALL
+                SELECT church_gkode AS gkode, kapita_id_sesi_2 AS idkapita FROM registrations
+            )
             SELECT
-                gk.gkid        AS gkid,
-                gk.gkode       AS gkode,
-                gk.idkapita    AS idkapita,
-                gk.kuota       AS kuota,
-                COALESCE(r.reg_count, 0) AS registered,
-                gk.kuota - COALESCE(r.reg_count, 0) AS quota_left
+                gk.gkid             AS gkid,
+                gk.gkode            AS gkode,
+                gk.idkapita         AS idkapita,
+                gk.kuota_sesi_1     AS manual_kuota_sesi_1,
+                gk.kuota_sesi_2     AS manual_kuota_sesi_2,
+                COALESCE(r1.reg_count, 0) AS registered_sesi_1,
+                COALESCE(r2.reg_count, 0) AS registered_sesi_2,
+                CASE
+                    WHEN gk.idkapita IN (5, 6)
+                        THEN FLOOR(pc.total / 4) + CASE WHEN (pc.total % 4) IN (1, 2, 3) THEN 1 ELSE 0 END
+                    WHEN gk.idkapita IN (7, 8)
+                        THEN FLOOR(pc.total / 4) + CASE WHEN (pc.total % 4) = 3 THEN 1 ELSE 0 END
+                    ELSE 0
+                END + fc.cnt AS system_kuota
             FROM gereja_kapita gk
+            CROSS JOIN participant_count pc
+            CROSS JOIN few_churches fc
             LEFT JOIN (
                 SELECT gkode, idkapita, COUNT(*) AS reg_count
-                FROM (
-                    SELECT ugereja AS gkode, ukapita_sesi_1 AS idkapita FROM users
-                    UNION ALL
-                    SELECT ugereja AS gkode, ukapita_sesi_2 AS idkapita FROM users
-                    UNION ALL
-                    SELECT church_gkode AS gkode, kapita_id_sesi_1 AS idkapita FROM registrations
-                    UNION ALL
-                    SELECT church_gkode AS gkode, kapita_id_sesi_2 AS idkapita FROM registrations
-                ) expanded
-                WHERE gkode = %s AND idkapita = %s
+                FROM sesi_1
                 GROUP BY gkode, idkapita
-            ) r ON r.gkode = gk.gkode AND r.idkapita = gk.idkapita
+            ) r1 ON r1.gkode = gk.gkode AND r1.idkapita = gk.idkapita
+            LEFT JOIN (
+                SELECT gkode, idkapita, COUNT(*) AS reg_count
+                FROM sesi_2
+                GROUP BY gkode, idkapita
+            ) r2 ON r2.gkode = gk.gkode AND r2.idkapita = gk.idkapita
             WHERE gk.gkode = %s AND gk.idkapita = %s
-        """, (p_gkode, p_idkapita, p_gkode, p_idkapita))
+        """, (p_gkode, p_gkode, p_idkapita))
         v_row = v_cursor.fetchone()
-        return dict(v_row) if v_row else None
+        if not v_row:
+            return None
+        v_kuota_sesi_1 = max(v_row["manual_kuota_sesi_1"], v_row["system_kuota"])
+        v_kuota_sesi_2 = max(v_row["manual_kuota_sesi_2"], v_row["system_kuota"])
+        v_row["kuota_sesi_1"] = v_kuota_sesi_1
+        v_row["kuota_sesi_2"] = v_kuota_sesi_2
+        v_row["quota_left_sesi_1"] = v_kuota_sesi_1 - v_row["registered_sesi_1"]
+        v_row["quota_left_sesi_2"] = v_kuota_sesi_2 - v_row["registered_sesi_2"]
+        v_row.pop("manual_kuota_sesi_1", None)
+        v_row.pop("manual_kuota_sesi_2", None)
+        v_row.pop("system_kuota", None)
+        return dict(v_row)
     except Exception as e:
         logger.error("dao_get_quota_by_church_and_kapita: %s", str(e))
         raise
@@ -405,6 +487,28 @@ def dao_delete_church_kapita_quota(p_gkode, p_idkapita):
         return v_cursor.rowcount > 0
     except Exception as e:
         logger.error("dao_delete_church_kapita_quota: %s", str(e))
+        raise
+    finally:
+        if v_cursor:
+            v_cursor.close()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PARTICIPANT DAO
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def dao_get_participants_by_church(p_gereja):
+    v_cursor = None
+    try:
+        v_conn = get_connection()
+        v_cursor = v_conn.cursor()
+        v_cursor.execute(
+            "SELECT pnama FROM participant WHERE pgereja = %s ORDER BY pnama ASC",
+            (p_gereja,)
+        )
+        return [row["pnama"] for row in v_cursor.fetchall()]
+    except Exception as e:
+        logger.error("dao_get_participants_by_church: %s", str(e))
         raise
     finally:
         if v_cursor:

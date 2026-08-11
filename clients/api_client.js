@@ -157,17 +157,19 @@ class ApiClient {
     return this._request('GET', `/api/churches/${gkode}/kapita-quota/${kapitaId}`);
   }
 
-  async setChurchKapitaQuota(gkode, kapitaId, kuota) {
+  async setChurchKapitaQuota(gkode, kapitaId, kuotaSesi1, kuotaSesi2) {
     return this._request('POST', `/api/churches/${gkode}/kapita-quota`, {
       kapita_id: kapitaId,
-      kuota,
+      kuota_sesi_1: kuotaSesi1,
+      kuota_sesi_2: kuotaSesi2,
     });
   }
 
-  async updateChurchKapitaQuota(gkode, kapitaId, kuota) {
+  async updateChurchKapitaQuota(gkode, kapitaId, kuotaSesi1, kuotaSesi2) {
     return this._request('PUT', `/api/churches/${gkode}/kapita-quota/${kapitaId}`, {
       kapita_id: kapitaId,
-      kuota,
+      kuota_sesi_1: kuotaSesi1,
+      kuota_sesi_2: kuotaSesi2,
     });
   }
 
@@ -425,13 +427,13 @@ async function main() {
 
   // 9. Admin — Quota CRUD
   if (adminGkode && adminKapitaId) {
-    res = await client.setChurchKapitaQuota(adminGkode, adminKapitaId, 50);
+    res = await client.setChurchKapitaQuota(adminGkode, adminKapitaId, 50, 50);
     show(`POST /api/churches/${adminGkode}/kapita-quota (set)`, res);
 
     res = await client.getChurchKapitaQuotas(adminGkode);
     show(`GET /api/churches/${adminGkode}/kapita-quota`, res);
 
-    res = await client.updateChurchKapitaQuota(adminGkode, adminKapitaId, 100);
+    res = await client.updateChurchKapitaQuota(adminGkode, adminKapitaId, 100, 100);
     show(`PUT /api/churches/${adminGkode}/kapita-quota/${adminKapitaId} (update)`, res);
   }
 

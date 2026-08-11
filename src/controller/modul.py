@@ -21,22 +21,17 @@ from src.dao.modul import (
     dao_update_registration, dao_delete_registration,
     dao_create_user, dao_get_all_users, dao_get_user_by_id,
     dao_update_user, dao_delete_user, dao_count_users_by_church_and_kapita,
+    dao_get_participants_by_church,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
-def _compute_effective_left(p_church_gkode, p_kapita_id):
+def _compute_effective_left(p_church_gkode, p_kapita_id, p_sesi):
     v_quota = dao_get_quota_by_church_and_kapita(p_church_gkode, p_kapita_id)
     if not v_quota:
         return None, None, None
-    v_total_kapita = len(dao_get_all_kapita())
-    v_kuota = v_quota["kuota"]
-    if v_kuota < v_total_kapita and v_total_kapita > 0:
-        v_effective_kuota = v_kuota * v_total_kapita
-    else:
-        v_effective_kuota = v_kuota
-    v_registered = v_quota["registered"]
-    v_effective_left = v_effective_kuota - v_registered
+    v_effective_kuota = v_quota[f"kuota_sesi_{p_sesi}"]
+    v_effective_left = v_quota[f"quota_left_sesi_{p_sesi}"]
     return v_effective_kuota, v_effective_left, v_quota
 
 
@@ -122,22 +117,18 @@ def ctrl_delete_admin(p_aid, **kwargs):
 # GEREJA
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _build_church_response(p_church, p_kapita_quotas, p_total_kapita_count):
+def _build_church_response(p_church, p_kapita_quotas):
     v_result_kapita = []
     v_any_kapita_available = False
 
     for k in p_kapita_quotas:
-        v_kuota = k["kuota"]
-        v_registered = k["registered"]
-
-        if v_kuota < p_total_kapita_count and p_total_kapita_count > 0:
-            v_effective_kuota = v_kuota * p_total_kapita_count
-        else:
-            v_effective_kuota = v_kuota
-
-        v_effective_left = v_effective_kuota - v_registered
-        v_flag_kapita = "T" if v_effective_left > 0 else "F"
-        if v_effective_left > 0:
+        v_kuota_sesi_1 = k["kuota_sesi_1"]
+        v_kuota_sesi_2 = k["kuota_sesi_2"]
+        v_left_sesi_1 = k["quota_left_sesi_1"]
+        v_left_sesi_2 = k["quota_left_sesi_2"]
+        v_flag_sesi_1 = "T" if v_left_sesi_1 > 0 else "F"
+        v_flag_sesi_2 = "T" if v_left_sesi_2 > 0 else "F"
+        if v_left_sesi_1 > 0 or v_left_sesi_2 > 0:
             v_any_kapita_available = True
 
         v_result_kapita.append({
@@ -145,24 +136,44 @@ def _build_church_response(p_church, p_kapita_quotas, p_total_kapita_count):
             "gkode": k["gkode"],
             "idkapita": k["idkapita"],
             "kapita_name": k["kapita_name"],
-            "kuota": v_kuota,
-            "registered": v_registered,
-            "quota_left": k["quota_left"],
-            "effective_kuota": v_effective_kuota,
-            "effective_left": v_effective_left,
-            "flag_kapita": v_flag_kapita,
+            "kuota_sesi_1": v_kuota_sesi_1,
+            "kuota_sesi_2": v_kuota_sesi_2,
+            "registered_sesi_1": k["registered_sesi_1"],
+            "registered_sesi_2": k["registered_sesi_2"],
+            "quota_left_sesi_1": v_left_sesi_1,
+            "quota_left_sesi_2": v_left_sesi_2,
+            "effective_kuota_sesi_1": v_kuota_sesi_1,
+            "effective_kuota_sesi_2": v_kuota_sesi_2,
+            "effective_left_sesi_1": v_left_sesi_1,
+            "effective_left_sesi_2": v_left_sesi_2,
+            "flag_sesi_1": v_flag_sesi_1,
+            "flag_sesi_2": v_flag_sesi_2,
+            "effective_left": v_left_sesi_1 + v_left_sesi_2,
+            "flag_kapita": "T" if (v_left_sesi_1 > 0 or v_left_sesi_2 > 0) else "F",
         })
 
-    v_total_effective_quota = sum(k["effective_kuota"] for k in v_result_kapita)
-    v_total_registered = sum(k["registered"] for k in v_result_kapita)
-    v_flag_gereja = "T" if v_any_kapita_available else "F"
+    v_total_kuota_sesi_1 = sum(k["kuota_sesi_1"] for k in v_result_kapita)
+    v_total_kuota_sesi_2 = sum(k["kuota_sesi_2"] for k in v_result_kapita)
+    v_total_reg_sesi_1 = sum(k["registered_sesi_1"] for k in v_result_kapita)
+    v_total_reg_sesi_2 = sum(k["registered_sesi_2"] for k in v_result_kapita)
+    v_total_left_sesi_1 = v_total_kuota_sesi_1 - v_total_reg_sesi_1
+    v_total_left_sesi_2 = v_total_kuota_sesi_2 - v_total_reg_sesi_2
+    v_flag_gereja = "T" if (v_total_left_sesi_1 > 0 or v_total_left_sesi_2 > 0) else "F"
 
     return {
         "id": p_church["gkode"],
         "name": p_church["name"],
-        "total_quota": v_total_effective_quota,
-        "total_registered": v_total_registered,
-        "quota_left": v_total_effective_quota - v_total_registered,
+        "kuota_sesi_1": v_total_kuota_sesi_1,
+        "kuota_sesi_2": v_total_kuota_sesi_2,
+        "registered_sesi_1": v_total_reg_sesi_1,
+        "registered_sesi_2": v_total_reg_sesi_2,
+        "quota_left_sesi_1": v_total_left_sesi_1,
+        "quota_left_sesi_2": v_total_left_sesi_2,
+        "flag_sesi_1": "T" if v_total_left_sesi_1 > 0 else "F",
+        "flag_sesi_2": "T" if v_total_left_sesi_2 > 0 else "F",
+        "total_quota": v_total_kuota_sesi_1 + v_total_kuota_sesi_2,
+        "total_registered": v_total_reg_sesi_1 + v_total_reg_sesi_2,
+        "quota_left": v_total_left_sesi_1 + v_total_left_sesi_2,
         "flag_gereja": v_flag_gereja,
         "kapita": v_result_kapita,
     }
@@ -171,11 +182,10 @@ def _build_church_response(p_church, p_kapita_quotas, p_total_kapita_count):
 @validasi
 def ctrl_get_all_churches():
     v_churches = dao_get_all_churches()
-    v_total_kapita = len(dao_get_all_kapita())
     v_result = []
     for v_church in v_churches:
         v_kapita_quotas = dao_get_church_kapita_quotas(v_church["gkode"])
-        v_result.append(_build_church_response(v_church, v_kapita_quotas, v_total_kapita))
+        v_result.append(_build_church_response(v_church, v_kapita_quotas))
     return v_result
 
 
@@ -185,8 +195,7 @@ def ctrl_get_church_detail(p_church_gkode):
     if not v_church:
         raise ServiceException(status_code=404, detail=f"Gereja dengan kode {p_church_gkode} tidak ditemukan.")
     v_kapita_quotas = dao_get_church_kapita_quotas(p_church_gkode)
-    v_total_kapita = len(dao_get_all_kapita())
-    return _build_church_response(v_church, v_kapita_quotas, v_total_kapita)
+    return _build_church_response(v_church, v_kapita_quotas)
 
 
 @validasi
@@ -195,10 +204,10 @@ def ctrl_create_church(p_name, **kwargs):
     v_new_gkode = dao_create_church(p_name)
     v_all_kapita = dao_get_all_kapita()
     for v_k in v_all_kapita:
-        dao_set_church_kapita_quota(v_new_gkode, v_k["idkapita"], 0)
+        dao_set_church_kapita_quota(v_new_gkode, v_k["idkapita"], 0, 0)
     v_church = dao_get_church_by_gkode(v_new_gkode)
     v_kapita_quotas = dao_get_church_kapita_quotas(v_new_gkode)
-    return _build_church_response(v_church, v_kapita_quotas, len(v_all_kapita))
+    return _build_church_response(v_church, v_kapita_quotas)
 
 
 @validasi
@@ -210,8 +219,7 @@ def ctrl_update_church(p_church_gkode, p_name, **kwargs):
     dao_update_church(p_church_gkode, p_name)
     v_updated = dao_get_church_by_gkode(p_church_gkode)
     v_kapita_quotas = dao_get_church_kapita_quotas(p_church_gkode)
-    v_total_kapita = len(dao_get_all_kapita())
-    return _build_church_response(v_updated, v_kapita_quotas, v_total_kapita)
+    return _build_church_response(v_updated, v_kapita_quotas)
 
 
 @validasi
@@ -229,33 +237,32 @@ def ctrl_delete_church(p_church_gkode, **kwargs):
 
 @validasi
 @require_role("Admin", "SuperAdmin")
-def ctrl_set_church_kapita_quota(p_church_gkode, p_kapita_id, p_kuota, **kwargs):
+def ctrl_set_church_kapita_quota(p_church_gkode, p_kapita_id, p_kuota_sesi_1, p_kuota_sesi_2, **kwargs):
     v_church = dao_get_church_by_gkode(p_church_gkode)
     if not v_church:
         raise ServiceException(status_code=404, detail=f"Gereja dengan kode {p_church_gkode} tidak ditemukan.")
     v_kapita = dao_get_kapita_by_id(p_kapita_id)
     if not v_kapita:
         raise ServiceException(status_code=404, detail=f"Kapita dengan ID {p_kapita_id} tidak ditemukan.")
-    dao_set_church_kapita_quota(p_church_gkode, p_kapita_id, p_kuota)
+    dao_set_church_kapita_quota(p_church_gkode, p_kapita_id, p_kuota_sesi_1, p_kuota_sesi_2)
     v_quota = dao_get_quota_by_church_and_kapita(p_church_gkode, p_kapita_id)
-    v_total_kapita = len(dao_get_all_kapita())
-    v_kuota = v_quota["kuota"]
-    if v_kuota < v_total_kapita and v_total_kapita > 0:
-        v_effective_kuota = v_kuota * v_total_kapita
-    else:
-        v_effective_kuota = v_kuota
-    v_effective_left = v_effective_kuota - v_quota["registered"]
     return {
         "gkid": v_quota["gkid"],
         "gkode": v_quota["gkode"],
         "idkapita": v_quota["idkapita"],
         "kapita_name": v_kapita["namakapita"],
-        "kuota": v_kuota,
-        "registered": v_quota["registered"],
-        "quota_left": v_quota["quota_left"],
-        "effective_kuota": v_effective_kuota,
-        "effective_left": v_effective_left,
-        "flag_kapita": "T" if v_effective_left > 0 else "F",
+        "kuota_sesi_1": v_quota["kuota_sesi_1"],
+        "kuota_sesi_2": v_quota["kuota_sesi_2"],
+        "registered_sesi_1": v_quota["registered_sesi_1"],
+        "registered_sesi_2": v_quota["registered_sesi_2"],
+        "quota_left_sesi_1": v_quota["quota_left_sesi_1"],
+        "quota_left_sesi_2": v_quota["quota_left_sesi_2"],
+        "effective_kuota_sesi_1": v_quota["kuota_sesi_1"],
+        "effective_kuota_sesi_2": v_quota["kuota_sesi_2"],
+        "effective_left_sesi_1": v_quota["quota_left_sesi_1"],
+        "effective_left_sesi_2": v_quota["quota_left_sesi_2"],
+        "flag_sesi_1": "T" if v_quota["quota_left_sesi_1"] > 0 else "F",
+        "flag_sesi_2": "T" if v_quota["quota_left_sesi_2"] > 0 else "F",
     }
 
 
@@ -265,23 +272,18 @@ def ctrl_get_church_kapita_quotas(p_church_gkode):
     if not v_church:
         raise ServiceException(status_code=404, detail=f"Gereja dengan kode {p_church_gkode} tidak ditemukan.")
     v_quotas = dao_get_church_kapita_quotas(p_church_gkode)
-    v_total_kapita = len(dao_get_all_kapita())
     v_result = []
-    v_any_available = False
     for k in v_quotas:
-        v_kuota = k["kuota"]
-        if v_kuota < v_total_kapita and v_total_kapita > 0:
-            v_effective_kuota = v_kuota * v_total_kapita
-        else:
-            v_effective_kuota = v_kuota
-        v_effective_left = v_effective_kuota - k["registered"]
-        if v_effective_left > 0:
-            v_any_available = True
         v_result.append({
             **k,
-            "effective_kuota": v_effective_kuota,
-            "effective_left": v_effective_left,
-            "flag_kapita": "T" if v_effective_left > 0 else "F",
+            "effective_kuota_sesi_1": k["kuota_sesi_1"],
+            "effective_kuota_sesi_2": k["kuota_sesi_2"],
+            "effective_left_sesi_1": k["quota_left_sesi_1"],
+            "effective_left_sesi_2": k["quota_left_sesi_2"],
+            "flag_sesi_1": "T" if k["quota_left_sesi_1"] > 0 else "F",
+            "flag_sesi_2": "T" if k["quota_left_sesi_2"] > 0 else "F",
+            "effective_left": k["quota_left_sesi_1"] + k["quota_left_sesi_2"],
+            "flag_kapita": "T" if (k["quota_left_sesi_1"] > 0 or k["quota_left_sesi_2"] > 0) else "F",
         })
     return v_result
 
@@ -292,24 +294,23 @@ def ctrl_get_church_kapita_quota_detail(p_church_gkode, p_kapita_id):
     if not v_quota:
         raise ServiceException(status_code=404, detail=f"Kuota untuk gereja {p_church_gkode} kapita {p_kapita_id} tidak ditemukan.")
     v_kapita = dao_get_kapita_by_id(p_kapita_id)
-    v_total_kapita = len(dao_get_all_kapita())
-    v_kuota = v_quota["kuota"]
-    if v_kuota < v_total_kapita and v_total_kapita > 0:
-        v_effective_kuota = v_kuota * v_total_kapita
-    else:
-        v_effective_kuota = v_kuota
-    v_effective_left = v_effective_kuota - v_quota["registered"]
     return {
         "gkid": v_quota["gkid"],
         "gkode": v_quota["gkode"],
         "idkapita": v_quota["idkapita"],
         "kapita_name": v_kapita["namakapita"] if v_kapita else "",
-        "kuota": v_kuota,
-        "registered": v_quota["registered"],
-        "quota_left": v_quota["quota_left"],
-        "effective_kuota": v_effective_kuota,
-        "effective_left": v_effective_left,
-        "flag_kapita": "T" if v_effective_left > 0 else "F",
+        "kuota_sesi_1": v_quota["kuota_sesi_1"],
+        "kuota_sesi_2": v_quota["kuota_sesi_2"],
+        "registered_sesi_1": v_quota["registered_sesi_1"],
+        "registered_sesi_2": v_quota["registered_sesi_2"],
+        "quota_left_sesi_1": v_quota["quota_left_sesi_1"],
+        "quota_left_sesi_2": v_quota["quota_left_sesi_2"],
+        "effective_kuota_sesi_1": v_quota["kuota_sesi_1"],
+        "effective_kuota_sesi_2": v_quota["kuota_sesi_2"],
+        "effective_left_sesi_1": v_quota["quota_left_sesi_1"],
+        "effective_left_sesi_2": v_quota["quota_left_sesi_2"],
+        "flag_sesi_1": "T" if v_quota["quota_left_sesi_1"] > 0 else "F",
+        "flag_sesi_2": "T" if v_quota["quota_left_sesi_2"] > 0 else "F",
     }
 
 
@@ -385,26 +386,26 @@ def ctrl_create_registration(p_payload):
     if not v_kapita_2:
         raise ServiceException(status_code=404, detail=f"Kapita Sesi 2 dengan ID {p_payload.kapita_id_sesi_2} tidak ditemukan.")
 
-    v_eff_kuota_1, v_eff_left_1, v_quota_1 = _compute_effective_left(p_payload.church_gkode, p_payload.kapita_id_sesi_1)
+    v_eff_kuota_1, v_eff_left_1, v_quota_1 = _compute_effective_left(p_payload.church_gkode, p_payload.kapita_id_sesi_1, 1)
     if v_quota_1 is None:
         raise ServiceException(status_code=400, detail=f"Kuota untuk gereja '{v_church['name']}' kapita '{v_kapita_1['namakapita']}' belum diatur.")
 
-    v_eff_kuota_2, v_eff_left_2, v_quota_2 = _compute_effective_left(p_payload.church_gkode, p_payload.kapita_id_sesi_2)
+    v_eff_kuota_2, v_eff_left_2, v_quota_2 = _compute_effective_left(p_payload.church_gkode, p_payload.kapita_id_sesi_2, 2)
     if v_quota_2 is None:
         raise ServiceException(status_code=400, detail=f"Kuota untuk gereja '{v_church['name']}' kapita '{v_kapita_2['namakapita']}' belum diatur.")
 
     if p_payload.kapita_id_sesi_1 == p_payload.kapita_id_sesi_2:
-        if v_eff_left_1 < 2:
+        if v_eff_left_1 < 1 or v_eff_left_2 < 1:
             raise ServiceException(
                 status_code=400,
-                detail=f"Kapita '{v_kapita_1['namakapita']}' tidak cukup untuk mendaftar 2 sesi sekaligus (sisa kuota: {v_eff_left_1})."
+                detail=f"Kapita '{v_kapita_1['namakapita']}' tidak cukup untuk mendaftar 2 sesi sekaligus (sisa sesi 1: {v_eff_left_1}, sisa sesi 2: {v_eff_left_2})."
             )
     else:
         v_errors = []
         if v_eff_left_1 <= 0:
-            v_errors.append(f"Sesi 1 - Kapita '{v_kapita_1['namakapita']}' sudah penuh (kuota: {v_eff_kuota_1}, terdaftar: {v_quota_1['registered']})")
+            v_errors.append(f"Sesi 1 - Kapita '{v_kapita_1['namakapita']}' sudah penuh (kuota: {v_eff_kuota_1}, terdaftar: {v_quota_1['registered_sesi_1']})")
         if v_eff_left_2 <= 0:
-            v_errors.append(f"Sesi 2 - Kapita '{v_kapita_2['namakapita']}' sudah penuh (kuota: {v_eff_kuota_2}, terdaftar: {v_quota_2['registered']})")
+            v_errors.append(f"Sesi 2 - Kapita '{v_kapita_2['namakapita']}' sudah penuh (kuota: {v_eff_kuota_2}, terdaftar: {v_quota_2['registered_sesi_2']})")
         if v_errors:
             raise ServiceException(status_code=400, detail="; ".join(v_errors))
 
@@ -509,26 +510,26 @@ def ctrl_create_user(p_payload):
     if not v_kapita_2:
         raise ServiceException(status_code=404, detail=f"Kapita Sesi 2 dengan ID {p_payload.ukapita_sesi_2} tidak ditemukan.")
 
-    v_eff_kuota_1, v_eff_left_1, v_quota_1 = _compute_effective_left(p_payload.church_gkode, p_payload.ukapita_sesi_1)
+    v_eff_kuota_1, v_eff_left_1, v_quota_1 = _compute_effective_left(p_payload.church_gkode, p_payload.ukapita_sesi_1, 1)
     if v_quota_1 is None:
         raise ServiceException(status_code=400, detail=f"Kuota untuk gereja '{v_church['name']}' kapita '{v_kapita_1['namakapita']}' belum diatur.")
 
-    v_eff_kuota_2, v_eff_left_2, v_quota_2 = _compute_effective_left(p_payload.church_gkode, p_payload.ukapita_sesi_2)
+    v_eff_kuota_2, v_eff_left_2, v_quota_2 = _compute_effective_left(p_payload.church_gkode, p_payload.ukapita_sesi_2, 2)
     if v_quota_2 is None:
         raise ServiceException(status_code=400, detail=f"Kuota untuk gereja '{v_church['name']}' kapita '{v_kapita_2['namakapita']}' belum diatur.")
 
     if p_payload.ukapita_sesi_1 == p_payload.ukapita_sesi_2:
-        if v_eff_left_1 < 2:
+        if v_eff_left_1 < 1 or v_eff_left_2 < 1:
             raise ServiceException(
                 status_code=400,
-                detail=f"Kapita '{v_kapita_1['namakapita']}' tidak cukup untuk mendaftar 2 sesi sekaligus (sisa kuota: {v_eff_left_1})."
+                detail=f"Kapita '{v_kapita_1['namakapita']}' tidak cukup untuk mendaftar 2 sesi sekaligus (sisa sesi 1: {v_eff_left_1}, sisa sesi 2: {v_eff_left_2})."
             )
     else:
         v_errors = []
         if v_eff_left_1 <= 0:
-            v_errors.append(f"Sesi 1 - Kapita '{v_kapita_1['namakapita']}' sudah penuh (kuota: {v_eff_kuota_1}, terdaftar: {v_quota_1['registered']})")
+            v_errors.append(f"Sesi 1 - Kapita '{v_kapita_1['namakapita']}' sudah penuh (kuota: {v_eff_kuota_1}, terdaftar: {v_quota_1['registered_sesi_1']})")
         if v_eff_left_2 <= 0:
-            v_errors.append(f"Sesi 2 - Kapita '{v_kapita_2['namakapita']}' sudah penuh (kuota: {v_eff_kuota_2}, terdaftar: {v_quota_2['registered']})")
+            v_errors.append(f"Sesi 2 - Kapita '{v_kapita_2['namakapita']}' sudah penuh (kuota: {v_eff_kuota_2}, terdaftar: {v_quota_2['registered_sesi_2']})")
         if v_errors:
             raise ServiceException(status_code=400, detail="; ".join(v_errors))
 
@@ -611,6 +612,17 @@ def ctrl_delete_user(p_uid):
     if not v_user:
         raise ServiceException(status_code=404, detail=f"User dengan ID {p_uid} tidak ditemukan.")
     return dao_delete_user(p_uid)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PARTICIPANT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@validasi
+def ctrl_get_participants_by_church(p_gereja):
+    if not p_gereja:
+        raise ServiceException(status_code=400, detail="Parameter gereja wajib diisi.")
+    return dao_get_participants_by_church(p_gereja)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

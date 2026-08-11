@@ -200,16 +200,18 @@ class ApiClient:
     def get_church_kapita_quota(self, p_gkode: str, p_kapita_id: int) -> dict:
         return self._request("GET", f"/api/churches/{p_gkode}/kapita-quota/{p_kapita_id}")
 
-    def set_church_kapita_quota(self, p_gkode: str, p_kapita_id: int, p_kuota: int) -> dict:
+    def set_church_kapita_quota(self, p_gkode: str, p_kapita_id: int, p_kuota_sesi_1: int, p_kuota_sesi_2: int) -> dict:
         return self._request("POST", f"/api/churches/{p_gkode}/kapita-quota", p_json_body={
             "kapita_id": p_kapita_id,
-            "kuota": p_kuota,
+            "kuota_sesi_1": p_kuota_sesi_1,
+            "kuota_sesi_2": p_kuota_sesi_2,
         })
 
-    def update_church_kapita_quota(self, p_gkode: str, p_kapita_id: int, p_kuota: int) -> dict:
+    def update_church_kapita_quota(self, p_gkode: str, p_kapita_id: int, p_kuota_sesi_1: int, p_kuota_sesi_2: int) -> dict:
         return self._request("PUT", f"/api/churches/{p_gkode}/kapita-quota/{p_kapita_id}", p_json_body={
             "kapita_id": p_kapita_id,
-            "kuota": p_kuota,
+            "kuota_sesi_1": p_kuota_sesi_1,
+            "kuota_sesi_2": p_kuota_sesi_2,
         })
 
     def delete_church_kapita_quota(self, p_gkode: str, p_kapita_id: int) -> dict:
@@ -507,7 +509,7 @@ if __name__ == "__main__":
         # 9. ADMIN — Church Kapita Quota CRUD
         # ═══════════════════════════════════════════════════════
         if v_admin_gkode and v_admin_kapita_id:
-            v_resp = v_client.set_church_kapita_quota(v_admin_gkode, v_admin_kapita_id, 50)
+            v_resp = v_client.set_church_kapita_quota(v_admin_gkode, v_admin_kapita_id, 50, 50)
             show(f"POST /api/churches/{v_admin_gkode}/kapita-quota (set)", v_resp)
 
             v_resp = v_client.get_church_kapita_quotas(v_admin_gkode)
@@ -516,7 +518,7 @@ if __name__ == "__main__":
             v_resp = v_client.get_church_kapita_quota(v_admin_gkode, v_admin_kapita_id)
             show(f"GET /api/churches/{v_admin_gkode}/kapita-quota/{v_admin_kapita_id}", v_resp)
 
-            v_resp = v_client.update_church_kapita_quota(v_admin_gkode, v_admin_kapita_id, 100)
+            v_resp = v_client.update_church_kapita_quota(v_admin_gkode, v_admin_kapita_id, 100, 100)
             show(f"PUT /api/churches/{v_admin_gkode}/kapita-quota/{v_admin_kapita_id} (update)", v_resp)
 
             v_resp = v_client.get_church_kapita_quota(v_admin_gkode, v_admin_kapita_id)

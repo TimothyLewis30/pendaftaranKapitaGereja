@@ -24,7 +24,8 @@ class ChurchQuotaResponse(BaseModel):
 
 class ChurchKapitaQuotaCreate(BaseModel):
     kapita_id:  int = Field(..., gt=0)
-    kuota:      int = Field(..., ge=0)
+    kuota_sesi_1: int = Field(..., ge=0)
+    kuota_sesi_2: int = Field(..., ge=0)
 
 
 class ChurchKapitaQuotaResponse(BaseModel):

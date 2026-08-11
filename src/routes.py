@@ -20,6 +20,7 @@ from src.controller.modul import (
     ctrl_delete_registration,
     ctrl_create_user, ctrl_get_all_users, ctrl_get_user_by_id,
     ctrl_update_user, ctrl_delete_user, ctrl_export_excel_peserta,
+    ctrl_get_participants_by_church,
 )
 from src.models.admin_model import AdminCreate, AdminLogin
 from src.models.church_model import ChurchCreate, ChurchUpdate, ChurchKapitaQuotaCreate
@@ -135,7 +136,7 @@ class ChurchKapitaQuotaListResource(Resource):
         except ValidationError as e:
             return responseJson(400, False, "Validasi data gagal.", e.errors()), 400
         v_result = ctrl_set_church_kapita_quota(
-            p_church_gkode, v_payload.kapita_id, v_payload.kuota)
+            p_church_gkode, v_payload.kapita_id, v_payload.kuota_sesi_1, v_payload.kuota_sesi_2)
         return responseJson(201, True, "Kuota kapita gereja berhasil disimpan.", v_result), 201
 
 
@@ -152,7 +153,7 @@ class ChurchKapitaQuotaDetailResource(Resource):
         except ValidationError as e:
             return responseJson(400, False, "Validasi data gagal.", e.errors()), 400
         v_result = ctrl_set_church_kapita_quota(
-            p_church_gkode, p_kapita_id, v_payload.kuota)
+            p_church_gkode, p_kapita_id, v_payload.kuota_sesi_1, v_payload.kuota_sesi_2)
         return responseJson(200, True, "Kuota kapita gereja berhasil diupdate.", v_result)
 
     def delete(self, p_church_gkode, p_kapita_id):
@@ -329,6 +330,20 @@ class CetakExcelResource(Resource):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# PARTICIPANT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ParticipantListByChurchResource(Resource):
+    @validasi
+    def get(self):
+        v_gereja = request.args.get("gereja")
+        if not v_gereja:
+            return responseJson(400, False, "Parameter 'gereja' wajib diisi.", []), 400
+        v_result = ctrl_get_participants_by_church(v_gereja)
+        return responseJson(200, True, "Daftar peserta berhasil ditemukan.", v_result)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # REGISTER ROUTES
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -353,4 +368,5 @@ def registerRoutes(api):
     api.add_resource(UserDetailResource,                "/api/users/<int:p_uid>",                                           endpoint="user-detail")
 
     api.add_resource(CetakExcelResource,                "/api/cetak-excel",                                                 endpoint="cetak-excel")
+    api.add_resource(ParticipantListByChurchResource,    "/api/participants",                                                endpoint="participants-by-church")
 

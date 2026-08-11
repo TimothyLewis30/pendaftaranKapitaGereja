@@ -140,8 +140,8 @@ export async function getChurchKapitaQuotas(gkode: string) {
   return request("GET", `/api/churches/${gkode}/kapita-quota`);
 }
 
-export async function setChurchKapitaQuota(gkode: string, kapitaId: number, kuota: number, adminId: number) {
-  return request("POST", `/api/churches/${gkode}/kapita-quota`, { kapita_id: kapitaId, kuota }, null, adminId);
+export async function setChurchKapitaQuota(gkode: string, kapitaId: number, kuotaSesi1: number, kuotaSesi2: number, adminId: number) {
+  return request("POST", `/api/churches/${gkode}/kapita-quota`, { kapita_id: kapitaId, kuota_sesi_1: kuotaSesi1, kuota_sesi_2: kuotaSesi2 }, null, adminId);
 }
 
 export async function deleteChurchKapitaQuota(gkode: string, kapitaId: number, adminId: number) {
