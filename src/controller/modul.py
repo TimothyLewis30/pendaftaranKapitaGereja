@@ -2,6 +2,7 @@
 controller/modul.py
 Business logic untuk semua modul (gabungan).
 """
+from src.utils import responseJson
 from src.utils.exceptions import ServiceException
 from src.validasi.validate import validasi, require_role
 from src.dao.modul import (
@@ -17,11 +18,11 @@ from src.dao.modul import (
     dao_create_kapita, dao_get_all_kapita, dao_get_kapita_by_id,
     dao_update_kapita, dao_delete_kapita,
     dao_create_registration, dao_get_registration_by_id,
-    dao_get_registration_by_email, dao_count_registrations_by_church_and_kapita,
+    dao_count_registrations_by_church_and_kapita,
     dao_update_registration, dao_delete_registration,
     dao_create_user, dao_get_all_users, dao_get_user_by_id,
     dao_update_user, dao_delete_user, dao_count_users_by_church_and_kapita,
-    dao_get_participants_by_church,
+    dao_get_participants_by_church, dao_get_participant_by_id,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -121,25 +122,25 @@ def _build_church_response(p_church, p_kapita_quotas):
     v_result_kapita = []
     v_any_kapita_available = False
 
-    for k in p_kapita_quotas:
-        v_kuota_sesi_1 = k["kuota_sesi_1"]
-        v_kuota_sesi_2 = k["kuota_sesi_2"]
-        v_left_sesi_1 = k["quota_left_sesi_1"]
-        v_left_sesi_2 = k["quota_left_sesi_2"]
+    for k in p_kapita_quotas or []:
+        v_kuota_sesi_1 = k.get("kuota_sesi_1", 0)
+        v_kuota_sesi_2 = k.get("kuota_sesi_2", 0)
+        v_left_sesi_1 = k.get("quota_left_sesi_1", 0)
+        v_left_sesi_2 = k.get("quota_left_sesi_2", 0)
         v_flag_sesi_1 = "T" if v_left_sesi_1 > 0 else "F"
         v_flag_sesi_2 = "T" if v_left_sesi_2 > 0 else "F"
         if v_left_sesi_1 > 0 or v_left_sesi_2 > 0:
             v_any_kapita_available = True
 
         v_result_kapita.append({
-            "gkid": k["gkid"],
-            "gkode": k["gkode"],
-            "idkapita": k["idkapita"],
-            "kapita_name": k["kapita_name"],
+            "gkid": k.get("gkid"),
+            "gkode": k.get("gkode"),
+            "idkapita": k.get("idkapita"),
+            "kapita_name": k.get("kapita_name"),
             "kuota_sesi_1": v_kuota_sesi_1,
             "kuota_sesi_2": v_kuota_sesi_2,
-            "registered_sesi_1": k["registered_sesi_1"],
-            "registered_sesi_2": k["registered_sesi_2"],
+            "registered_sesi_1": k.get("registered_sesi_1", 0),
+            "registered_sesi_2": k.get("registered_sesi_2", 0),
             "quota_left_sesi_1": v_left_sesi_1,
             "quota_left_sesi_2": v_left_sesi_2,
             "effective_kuota_sesi_1": v_kuota_sesi_1,
@@ -374,9 +375,15 @@ def ctrl_delete_kapita(p_idkapita, **kwargs):
 
 @validasi
 def ctrl_create_registration(p_payload):
-    v_church = dao_get_church_by_gkode(p_payload.church_gkode)
+    v_participant = dao_get_participant_by_id(p_payload.uparticipant)
+    if not v_participant:
+        raise ServiceException(status_code=404, detail=f"Peserta dengan ID {p_payload.uparticipant} tidak ditemukan.")
+    if v_participant["pflag"] == "F":
+        raise ServiceException(status_code=400, detail=f"Peserta '{v_participant['pnama']}' sudah terdaftar.")
+
+    v_church = dao_get_church_by_gkode(v_participant["pgereja"])
     if not v_church:
-        raise ServiceException(status_code=404, detail=f"Gereja dengan kode {p_payload.church_gkode} tidak ditemukan.")
+        raise ServiceException(status_code=404, detail=f"Gereja dengan kode {v_participant['pgereja']} tidak ditemukan.")
 
     v_kapita_1 = dao_get_kapita_by_id(p_payload.kapita_id_sesi_1)
     if not v_kapita_1:
@@ -386,11 +393,11 @@ def ctrl_create_registration(p_payload):
     if not v_kapita_2:
         raise ServiceException(status_code=404, detail=f"Kapita Sesi 2 dengan ID {p_payload.kapita_id_sesi_2} tidak ditemukan.")
 
-    v_eff_kuota_1, v_eff_left_1, v_quota_1 = _compute_effective_left(p_payload.church_gkode, p_payload.kapita_id_sesi_1, 1)
+    v_eff_kuota_1, v_eff_left_1, v_quota_1 = _compute_effective_left(v_participant["pgereja"], p_payload.kapita_id_sesi_1, 1)
     if v_quota_1 is None:
         raise ServiceException(status_code=400, detail=f"Kuota untuk gereja '{v_church['name']}' kapita '{v_kapita_1['namakapita']}' belum diatur.")
 
-    v_eff_kuota_2, v_eff_left_2, v_quota_2 = _compute_effective_left(p_payload.church_gkode, p_payload.kapita_id_sesi_2, 2)
+    v_eff_kuota_2, v_eff_left_2, v_quota_2 = _compute_effective_left(v_participant["pgereja"], p_payload.kapita_id_sesi_2, 2)
     if v_quota_2 is None:
         raise ServiceException(status_code=400, detail=f"Kuota untuk gereja '{v_church['name']}' kapita '{v_kapita_2['namakapita']}' belum diatur.")
 
@@ -409,14 +416,10 @@ def ctrl_create_registration(p_payload):
         if v_errors:
             raise ServiceException(status_code=400, detail="; ".join(v_errors))
 
-    v_existing = dao_get_registration_by_email(p_payload.email)
-    # if v_existing:
-        # raise ServiceException(status_code=409, detail=f"Email '{p_payload.email}' sudah terdaftar.")
-
     v_new_id = dao_create_registration(
-        p_full_name=p_payload.full_name, p_email=p_payload.email,
-        p_phone=p_payload.phone, p_church_gkode=p_payload.church_gkode,
+        p_unama=v_participant["pnama"], p_ugereja=v_participant["pgereja"],
         p_kapita_id_sesi_1=p_payload.kapita_id_sesi_1, p_kapita_id_sesi_2=p_payload.kapita_id_sesi_2,
+        p_uparticipant=p_payload.uparticipant,
     )
     v_saved = dao_get_registration_by_id(v_new_id)
     if not v_saved:
@@ -424,11 +427,11 @@ def ctrl_create_registration(p_payload):
 
     return {
         "id": v_saved["uid"],
-        "full_name": v_saved["full_name"], "email": v_saved["email"],
-        "phone": v_saved["phone"],
+        "full_name": v_saved["full_name"],
         "church_gkode": v_saved["church_gkode"], "church_name": v_saved["church_name"],
         "kapita_id_sesi_1": v_saved["kapita_id_sesi_1"], "kapita_name_sesi_1": v_saved["kapita_name_sesi_1"],
         "kapita_id_sesi_2": v_saved["kapita_id_sesi_2"], "kapita_name_sesi_2": v_saved["kapita_name_sesi_2"],
+        "uparticipant": v_saved["uparticipant"],
         "registered_at": str(v_saved["registered_at"]),
     }
 
@@ -440,21 +443,13 @@ def ctrl_get_registration_by_id(p_reg_id):
         raise ServiceException(status_code=404, detail=f"Pendaftaran dengan ID {p_reg_id} tidak ditemukan.")
     return {
         "id": v_reg["uid"],
-        "full_name": v_reg["full_name"], "email": v_reg["email"],
-        "phone": v_reg["phone"],
+        "full_name": v_reg["full_name"],
         "church_gkode": v_reg["church_gkode"], "church_name": v_reg["church_name"],
         "kapita_id_sesi_1": v_reg["kapita_id_sesi_1"], "kapita_name_sesi_1": v_reg["kapita_name_sesi_1"],
         "kapita_id_sesi_2": v_reg["kapita_id_sesi_2"], "kapita_name_sesi_2": v_reg["kapita_name_sesi_2"],
+        "uparticipant": v_reg["uparticipant"],
         "registered_at": str(v_reg["registered_at"]),
     }
-
-
-@validasi
-def ctrl_check_registration_by_email(p_email):
-    v_reg = dao_get_registration_by_email(p_email)
-    # if v_reg:
-    #     return {"email": p_email, "is_registered": True, "message": f"Email '{p_email}' sudah terdaftar atas nama {v_reg['full_name']}."}
-    return {"email": p_email, "is_registered": False, "message": f"Email '{p_email}' belum terdaftar."}
 
 
 @validasi
@@ -463,23 +458,45 @@ def ctrl_update_registration(p_reg_id, p_payload):
     if not v_reg:
         raise ServiceException(status_code=404, detail=f"Pendaftaran dengan ID {p_reg_id} tidak ditemukan.")
 
-    v_existing = dao_get_registration_by_email(p_payload.email)
-    # if v_existing and v_existing["id"] != p_reg_id:
-    #     raise ServiceException(status_code=409, detail=f"Email '{p_payload.email}' sudah terdaftar di pendaftaran lain.")
+    v_participant = dao_get_participant_by_id(p_payload.uparticipant)
+    if not v_participant:
+        raise ServiceException(status_code=404, detail=f"Peserta dengan ID {p_payload.uparticipant} tidak ditemukan.")
+    if v_participant["pflag"] == "F" and v_reg["uparticipant"] != p_payload.uparticipant:
+        raise ServiceException(status_code=400, detail=f"Peserta '{v_participant['pnama']}' sudah terdaftar.")
+
+    v_church = dao_get_church_by_gkode(v_participant["pgereja"])
+    if not v_church:
+        raise ServiceException(status_code=404, detail=f"Gereja dengan kode {v_participant['pgereja']} tidak ditemukan.")
+
+    v_kapita_1 = dao_get_kapita_by_id(p_payload.kapita_id_sesi_1)
+    if not v_kapita_1:
+        raise ServiceException(status_code=404, detail=f"Kapita Sesi 1 dengan ID {p_payload.kapita_id_sesi_1} tidak ditemukan.")
+
+    v_kapita_2 = dao_get_kapita_by_id(p_payload.kapita_id_sesi_2)
+    if not v_kapita_2:
+        raise ServiceException(status_code=404, detail=f"Kapita Sesi 2 dengan ID {p_payload.kapita_id_sesi_2} tidak ditemukan.")
+
+    v_eff_kuota_1, v_eff_left_1, v_quota_1 = _compute_effective_left(v_participant["pgereja"], p_payload.kapita_id_sesi_1, 1)
+    if v_quota_1 is None:
+        raise ServiceException(status_code=400, detail=f"Kuota untuk gereja '{v_church['name']}' kapita '{v_kapita_1['namakapita']}' belum diatur.")
+
+    v_eff_kuota_2, v_eff_left_2, v_quota_2 = _compute_effective_left(v_participant["pgereja"], p_payload.kapita_id_sesi_2, 2)
+    if v_quota_2 is None:
+        raise ServiceException(status_code=400, detail=f"Kuota untuk gereja '{v_church['name']}' kapita '{v_kapita_2['namakapita']}' belum diatur.")
 
     dao_update_registration(
-        p_id=p_reg_id, p_full_name=p_payload.full_name, p_email=p_payload.email,
-        p_phone=p_payload.phone, p_church_gkode=p_payload.church_gkode,
+        p_id=p_reg_id, p_unama=v_participant["pnama"], p_ugereja=v_participant["pgereja"],
         p_kapita_id_sesi_1=p_payload.kapita_id_sesi_1, p_kapita_id_sesi_2=p_payload.kapita_id_sesi_2,
+        p_uparticipant=p_payload.uparticipant,
     )
     v_updated = dao_get_registration_by_id(p_reg_id)
     return {
-        "id": v_updated["id"],
-        "full_name": v_updated["full_name"], "email": v_updated["email"],
-        "phone": v_updated["phone"],
+        "id": v_updated["uid"],
+        "full_name": v_updated["full_name"],
         "church_gkode": v_updated["church_gkode"], "church_name": v_updated["church_name"],
         "kapita_id_sesi_1": v_updated["kapita_id_sesi_1"], "kapita_name_sesi_1": v_updated["kapita_name_sesi_1"],
         "kapita_id_sesi_2": v_updated["kapita_id_sesi_2"], "kapita_name_sesi_2": v_updated["kapita_name_sesi_2"],
+        "uparticipant": v_updated["uparticipant"],
         "registered_at": str(v_updated["registered_at"]),
     }
 
@@ -498,9 +515,15 @@ def ctrl_delete_registration(p_reg_id):
 
 @validasi
 def ctrl_create_user(p_payload):
-    v_church = dao_get_church_by_gkode(p_payload.church_gkode)
+    v_participant = dao_get_participant_by_id(p_payload.uparticipant)
+    if not v_participant:
+        raise ServiceException(status_code=404, detail=f"Peserta dengan ID {p_payload.uparticipant} tidak ditemukan.")
+    if v_participant["pflag"] == "F":
+        raise ServiceException(status_code=400, detail=f"Peserta '{v_participant['pnama']}' sudah terdaftar.")
+
+    v_church = dao_get_church_by_gkode(v_participant["pgereja"])
     if not v_church:
-        raise ServiceException(status_code=404, detail=f"Gereja dengan kode {p_payload.church_gkode} tidak ditemukan.")
+        raise ServiceException(status_code=404, detail=f"Gereja dengan kode {v_participant['pgereja']} tidak ditemukan.")
 
     v_kapita_1 = dao_get_kapita_by_id(p_payload.ukapita_sesi_1)
     if not v_kapita_1:
@@ -510,11 +533,11 @@ def ctrl_create_user(p_payload):
     if not v_kapita_2:
         raise ServiceException(status_code=404, detail=f"Kapita Sesi 2 dengan ID {p_payload.ukapita_sesi_2} tidak ditemukan.")
 
-    v_eff_kuota_1, v_eff_left_1, v_quota_1 = _compute_effective_left(p_payload.church_gkode, p_payload.ukapita_sesi_1, 1)
+    v_eff_kuota_1, v_eff_left_1, v_quota_1 = _compute_effective_left(v_participant["pgereja"], p_payload.ukapita_sesi_1, 1)
     if v_quota_1 is None:
         raise ServiceException(status_code=400, detail=f"Kuota untuk gereja '{v_church['name']}' kapita '{v_kapita_1['namakapita']}' belum diatur.")
 
-    v_eff_kuota_2, v_eff_left_2, v_quota_2 = _compute_effective_left(p_payload.church_gkode, p_payload.ukapita_sesi_2, 2)
+    v_eff_kuota_2, v_eff_left_2, v_quota_2 = _compute_effective_left(v_participant["pgereja"], p_payload.ukapita_sesi_2, 2)
     if v_quota_2 is None:
         raise ServiceException(status_code=400, detail=f"Kuota untuk gereja '{v_church['name']}' kapita '{v_kapita_2['namakapita']}' belum diatur.")
 
@@ -533,19 +556,29 @@ def ctrl_create_user(p_payload):
         if v_errors:
             raise ServiceException(status_code=400, detail="; ".join(v_errors))
 
-    v_new_id = dao_create_user(
-        p_full_name=p_payload.full_name, p_email=p_payload.email,
-        p_phone=p_payload.phone, p_church_gkode=p_payload.church_gkode,
+    v_create_result = dao_create_user(
+        p_unama=v_participant["pnama"], p_ugereja=v_participant["pgereja"],
         p_ukapita_sesi_1=p_payload.ukapita_sesi_1, p_ukapita_sesi_2=p_payload.ukapita_sesi_2,
+        p_uparticipant=p_payload.uparticipant,
     )
+
+    if v_create_result["status"] == "F":
+        raise ServiceException(status_code=500, detail=v_create_result["message"])
+    if not v_create_result["results"] or not isinstance(v_create_result["results"], list):
+        raise ServiceException(status_code=500, detail="Gagal mendapatkan id user setelah insert.")
+
+    v_new_id = v_create_result["results"][0]["uid"]
     v_saved = dao_get_user_by_id(v_new_id)
+    if not v_saved:
+        raise ServiceException(status_code=500, detail="Gagal mengambil data user setelah disimpan.")
+
     return {
         "uid": v_saved["uid"],
-        "full_name": v_saved["unama"], "email": v_saved["uemail"],
-        "phone": v_saved["uphone"],
+        "full_name": v_saved["unama"],
         "church_gkode": v_saved["ugereja"], "church_name": v_saved["church_name"],
         "ukapita_sesi_1": v_saved["ukapita_sesi_1"], "kapita_name_sesi_1": v_saved["kapita_name_sesi_1"],
         "ukapita_sesi_2": v_saved["ukapita_sesi_2"], "kapita_name_sesi_2": v_saved["kapita_name_sesi_2"],
+        "uparticipant": v_saved["uparticipant"],
         "registered_at": str(v_saved["uregistered_at"]),
     }
 
@@ -554,11 +587,11 @@ def ctrl_create_user(p_payload):
 def ctrl_get_all_users():
     return [{
         "uid": v["uid"],
-        "full_name": v["unama"], "email": v["uemail"],
-        "phone": v["uphone"],
+        "full_name": v["unama"],
         "church_gkode": v["ugereja"], "church_name": v["church_name"],
         "ukapita_sesi_1": v["ukapita_sesi_1"], "kapita_name_sesi_1": v["kapita_name_sesi_1"],
         "ukapita_sesi_2": v["ukapita_sesi_2"], "kapita_name_sesi_2": v["kapita_name_sesi_2"],
+        "uparticipant": v["uparticipant"],
         "registered_at": str(v["uregistered_at"]),
     } for v in dao_get_all_users()]
 
@@ -570,11 +603,11 @@ def ctrl_get_user_by_id(p_uid):
         raise ServiceException(status_code=404, detail=f"User dengan ID {p_uid} tidak ditemukan.")
     return {
         "uid": v_user["uid"],
-        "full_name": v_user["unama"], "email": v_user["uemail"],
-        "phone": v_user["uphone"],
+        "full_name": v_user["unama"],
         "church_gkode": v_user["ugereja"], "church_name": v_user["church_name"],
         "ukapita_sesi_1": v_user["ukapita_sesi_1"], "kapita_name_sesi_1": v_user["kapita_name_sesi_1"],
         "ukapita_sesi_2": v_user["ukapita_sesi_2"], "kapita_name_sesi_2": v_user["kapita_name_sesi_2"],
+        "uparticipant": v_user["uparticipant"],
         "registered_at": str(v_user["uregistered_at"]),
     }
 
@@ -585,23 +618,37 @@ def ctrl_update_user(p_uid, p_payload):
     if not v_user:
         raise ServiceException(status_code=404, detail=f"User dengan ID {p_uid} tidak ditemukan.")
 
-    v_church = dao_get_church_by_gkode(p_payload.church_gkode)
+    v_participant = dao_get_participant_by_id(p_payload.uparticipant)
+    if not v_participant:
+        raise ServiceException(status_code=404, detail=f"Peserta dengan ID {p_payload.uparticipant} tidak ditemukan.")
+    if v_participant["pflag"] == "F" and v_user["uparticipant"] != p_payload.uparticipant:
+        raise ServiceException(status_code=400, detail=f"Peserta '{v_participant['pnama']}' sudah terdaftar.")
+
+    v_church = dao_get_church_by_gkode(v_participant["pgereja"])
     if not v_church:
-        raise ServiceException(status_code=404, detail=f"Gereja dengan kode {p_payload.church_gkode} tidak ditemukan.")
+        raise ServiceException(status_code=404, detail=f"Gereja dengan kode {v_participant['pgereja']} tidak ditemukan.")
+
+    v_kapita_1 = dao_get_kapita_by_id(p_payload.ukapita_sesi_1)
+    if not v_kapita_1:
+        raise ServiceException(status_code=404, detail=f"Kapita Sesi 1 dengan ID {p_payload.ukapita_sesi_1} tidak ditemukan.")
+
+    v_kapita_2 = dao_get_kapita_by_id(p_payload.ukapita_sesi_2)
+    if not v_kapita_2:
+        raise ServiceException(status_code=404, detail=f"Kapita Sesi 2 dengan ID {p_payload.ukapita_sesi_2} tidak ditemukan.")
 
     dao_update_user(
-        p_uid=p_uid, p_full_name=p_payload.full_name, p_email=p_payload.email,
-        p_phone=p_payload.phone, p_church_gkode=p_payload.church_gkode,
+        p_uid=p_uid, p_unama=v_participant["pnama"], p_ugereja=v_participant["pgereja"],
         p_ukapita_sesi_1=p_payload.ukapita_sesi_1, p_ukapita_sesi_2=p_payload.ukapita_sesi_2,
+        p_uparticipant=p_payload.uparticipant,
     )
     v_updated = dao_get_user_by_id(p_uid)
     return {
         "uid": v_updated["uid"],
-        "full_name": v_updated["unama"], "email": v_updated["uemail"],
-        "phone": v_updated["uphone"],
+        "full_name": v_updated["unama"],
         "church_gkode": v_updated["ugereja"], "church_name": v_updated["church_name"],
         "ukapita_sesi_1": v_updated["ukapita_sesi_1"], "kapita_name_sesi_1": v_updated["kapita_name_sesi_1"],
         "ukapita_sesi_2": v_updated["ukapita_sesi_2"], "kapita_name_sesi_2": v_updated["kapita_name_sesi_2"],
+        "uparticipant": v_updated["uparticipant"],
         "registered_at": str(v_updated["uregistered_at"]),
     }
 

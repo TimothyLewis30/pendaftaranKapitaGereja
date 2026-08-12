@@ -92,12 +92,10 @@ def generate_excel_peserta(p_pilihan, p_sesi_1=None, p_sesi_2=None, p_gkode=None
     worksheet.write(1, 0, f"Tanggal Dicetak: {v_tanggal_cetak} WIB", v_format_subtitle)
 
     # Column Headers Required:
-    # Nama, Email, NO TLP, Nama Gereja, Nama Kapita, Nama sesi 1, Nama Sesi 2, Register jam berapa
+    # Nama, Nama Gereja, Nama Kapita, Nama sesi 1, Nama Sesi 2, Register jam berapa
     v_headers = [
         "No",
         "Nama",
-        "Email",
-        "NO TLP",
         "Nama Gereja",
         "Nama Kapita",
         "Nama Sesi 1",
@@ -120,12 +118,6 @@ def generate_excel_peserta(p_pilihan, p_sesi_1=None, p_sesi_2=None, p_gkode=None
         
         # Nama
         v_nama = str(item.get('full_name') or '')
-        
-        # Email
-        v_email = str(item.get('email') or '')
-        
-        # NO TLP
-        v_phone = str(item.get('phone') or '')
         
         # Nama Gereja
         v_church_name = str(item.get('church_name') or '')
@@ -156,8 +148,6 @@ def generate_excel_peserta(p_pilihan, p_sesi_1=None, p_sesi_2=None, p_gkode=None
         row_values = [
             v_id_val,
             v_nama,
-            v_email,
-            v_phone,
             v_church_name,
             v_nama_kapita,
             v_sesi_1_name,
@@ -167,13 +157,11 @@ def generate_excel_peserta(p_pilihan, p_sesi_1=None, p_sesi_2=None, p_gkode=None
 
         worksheet.write(row, 0, v_id_val, v_format_body_center)
         worksheet.write(row, 1, v_nama, v_format_body)
-        worksheet.write(row, 2, v_email, v_format_body)
-        worksheet.write(row, 3, v_phone, v_format_body_center)
-        worksheet.write(row, 4, v_church_name, v_format_body)
-        worksheet.write(row, 5, v_nama_kapita, v_format_body)
-        worksheet.write(row, 6, v_sesi_1_name, v_format_body)
-        worksheet.write(row, 7, v_sesi_2_name, v_format_body)
-        worksheet.write(row, 8, v_reg_str, v_format_body_center)
+        worksheet.write(row, 2, v_church_name, v_format_body)
+        worksheet.write(row, 3, v_nama_kapita, v_format_body)
+        worksheet.write(row, 4, v_sesi_1_name, v_format_body)
+        worksheet.write(row, 5, v_sesi_2_name, v_format_body)
+        worksheet.write(row, 6, v_reg_str, v_format_body_center)
 
         # Update max column widths
         for c_idx, val in enumerate(row_values):

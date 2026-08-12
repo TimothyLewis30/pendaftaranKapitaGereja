@@ -151,27 +151,24 @@ export async function deleteChurchKapitaQuota(gkode: string, kapitaId: number, a
 // ── Registration (admin form) ─────────────────────────────
 export async function createRegistration(data: RegistrationPayload, adminId?: number) {
   const body: Record<string, unknown> = {
-    full_name: data.fullName,
-    email: data.email,
-    phone: data.phone,
-    church_gkode: data.churchGkode,
+    uparticipant: data.uparticipant,
     kapita_id_sesi_1: data.kapitaIdSesi1,
     kapita_id_sesi_2: data.kapitaIdSesi2,
   };
   return request("POST", "/api/registrations", body, null, adminId ?? null);
 }
 
-export async function checkRegistration(email: string) {
-  return request("GET", `/api/registrations/check/${email}`);
+// ── Participant ───────────────────────────────────────────
+export async function getParticipants(gkode: string) {
+  return request<{ status: boolean; results: Participant[] }>(
+    "GET", "/api/participants", null, { gereja: gkode }
+  );
 }
 
 // ── User (public form) ────────────────────────────────────
 export async function createUser(data: UserPayload) {
   const body: Record<string, unknown> = {
-    full_name: data.fullName,
-    email: data.email,
-    phone: data.phone,
-    church_gkode: data.churchGkode,
+    uparticipant: data.uparticipant,
     ukapita_sesi_1: data.ukapitaSesi1,
     ukapita_sesi_2: data.ukapitaSesi2,
   };
@@ -212,19 +209,20 @@ export interface ChurchKapitaQuota {
 }
 
 export interface RegistrationPayload {
-  fullName: string;
-  email: string;
-  phone: string;
-  churchGkode: string;
+  uparticipant: number;
   kapitaIdSesi1: number;
   kapitaIdSesi2: number;
 }
 
+export interface Participant {
+  pid: number;
+  pnama: string;
+  pgereja: string;
+  pflag: string;
+}
+
 export interface UserPayload {
-  fullName: string;
-  email: string;
-  phone: string;
-  churchGkode: string;
+  uparticipant: number;
   ukapitaSesi1: number;
   ukapitaSesi2: number;
 }

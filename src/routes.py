@@ -16,7 +16,7 @@ from src.controller.modul import (
     ctrl_create_kapita, ctrl_get_all_kapita, ctrl_get_kapita_by_id,
     ctrl_update_kapita, ctrl_delete_kapita,
     ctrl_create_registration, ctrl_get_registration_by_id,
-    ctrl_check_registration_by_email, ctrl_update_registration,
+    ctrl_update_registration,
     ctrl_delete_registration,
     ctrl_create_user, ctrl_get_all_users, ctrl_get_user_by_id,
     ctrl_update_user, ctrl_delete_user, ctrl_export_excel_peserta,
@@ -214,12 +214,6 @@ class RegistrationListResource(Resource):
         return responseJson(201, True, "Pendaftaran berhasil disimpan.", v_result), 201
 
 
-class RegistrationCheckResource(Resource):
-    def get(self, p_email):
-        v_result = ctrl_check_registration_by_email(p_email)
-        return responseJson(200, True, "Pengecekan email berhasil.", v_result)
-
-
 class RegistrationDetailResource(Resource):
     def get(self, p_reg_id):
         v_result = ctrl_get_registration_by_id(p_reg_id)
@@ -361,7 +355,6 @@ def registerRoutes(api):
     api.add_resource(KapitaDetailResource,              "/api/kapita/<int:p_idkapita>",                                     endpoint="kapita-detail")
 
     api.add_resource(RegistrationListResource,          "/api/registrations",                                               endpoint="registrations")
-    api.add_resource(RegistrationCheckResource,         "/api/registrations/check/<string:p_email>",                        endpoint="registration-check")
     api.add_resource(RegistrationDetailResource,        "/api/registrations/<int:p_reg_id>",                                endpoint="registration-detail")
 
     api.add_resource(UserListResource,                  "/api/users",                                                       endpoint="users")

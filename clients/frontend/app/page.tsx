@@ -4,24 +4,24 @@ import { useState, useEffect } from "react";
 import {
   getChurches,
   getKapitaList,
+  getParticipants,
   createUser,
-  checkRegistration,
   type Church,
   type Kapita,
+  type Participant,
 } from "@/lib/api";
 
 export default function Home() {
   const [churches, setChurches] = useState<Church[]>([]);
   const [kapitaList, setKapitaList] = useState<Kapita[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const [form, setForm] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
     churchGkode: "",
+    uparticipant: 0,
     ukapitaSesi1: 0,
     ukapitaSesi2: 0,
   });
@@ -44,12 +44,28 @@ export default function Home() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    async function loadParticipants() {
+      setParticipants([]);
+      setForm((prev) => ({ ...prev, uparticipant: 0 }));
+      if (!form.churchGkode) return;
+      try {
+        const res = await getParticipants(form.churchGkode);
+        if (res.status) setParticipants(res.results);
+      } catch {
+        setMessage({ type: "error", text: "Gagal memuat daftar peserta." });
+      }
+    }
+    loadParticipants();
+  }, [form.churchGkode]);
+
   const selectedChurch = churches.find((c) => c.id === form.churchGkode);
   const availableKapita = selectedChurch
     ? kapitaList.filter((k) =>
         selectedChurch.kapita.some((q) => q.idkapita === k.idkapita && q.effective_left > 0)
       )
     : [];
+  const availableParticipants = participants.filter((p) => p.pflag === "T");
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -57,7 +73,7 @@ export default function Home() {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: (name === "ukapitaSesi1" || name === "ukapitaSesi2") ? Number(value) : value,
+      [name]: (name === "uparticipant" || name === "ukapitaSesi1" || name === "ukapitaSesi2") ? Number(value) : value,
     }));
   };
 
@@ -67,18 +83,8 @@ export default function Home() {
     setMessage(null);
 
     try {
-      const check = await checkRegistration(form.email);
-      if (check.status && check.results?.is_registered) {
-        setMessage({ type: "error", text: check.results.message });
-        setSubmitting(false);
-        return;
-      }
-
       const res = await createUser({
-        fullName: form.fullName,
-        email: form.email,
-        phone: form.phone,
-        churchGkode: form.churchGkode,
+        uparticipant: form.uparticipant,
         ukapitaSesi1: form.ukapitaSesi1,
         ukapitaSesi2: form.ukapitaSesi2,
       });
@@ -86,10 +92,8 @@ export default function Home() {
       if (res.status) {
         setMessage({ type: "success", text: "Pendaftaran berhasil! Terima kasih." });
         setForm({
-          fullName: "",
-          email: "",
-          phone: "",
           churchGkode: "",
+          uparticipant: 0,
           ukapitaSesi1: 0,
           ukapitaSesi2: 0,
         });
@@ -136,42 +140,6 @@ export default function Home() {
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         <div>
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 4 }}>Nama Lengkap *</label>
-          <input
-            type="text"
-            name="fullName"
-            value={form.fullName}
-            onChange={handleChange}
-            required
-            style={{ width: "100%", padding: "0.5rem", border: "1px solid #ccc", borderRadius: 4 }}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 4 }}>Email *</label>
-          <input
-            type="email"
-            name="email"
-            value={form.email}
-            onChange={handleChange}
-            required
-            style={{ width: "100%", padding: "0.5rem", border: "1px solid #ccc", borderRadius: 4 }}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: "block", fontWeight: 500, marginBottom: 4 }}>Telepon *</label>
-          <input
-            type="tel"
-            name="phone"
-            value={form.phone}
-            onChange={handleChange}
-            required
-            style={{ width: "100%", padding: "0.5rem", border: "1px solid #ccc", borderRadius: 4 }}
-          />
-        </div>
-
-        <div>
           <label style={{ display: "block", fontWeight: 500, marginBottom: 4 }}>Gereja *</label>
           <select
             name="churchGkode"
@@ -184,6 +152,25 @@ export default function Home() {
             {churches.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} (Sisa kuota: {c.quota_left})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 4 }}>Nama Lengkap *</label>
+          <select
+            name="uparticipant"
+            value={form.uparticipant}
+            onChange={handleChange}
+            required
+            disabled={!form.churchGkode}
+            style={{ width: "100%", padding: "0.5rem", border: "1px solid #ccc", borderRadius: 4 }}
+          >
+            <option value={0}>-- Pilih Nama --</option>
+            {availableParticipants.map((p) => (
+              <option key={p.pid} value={p.pid}>
+                {p.pnama}
               </option>
             ))}
           </select>

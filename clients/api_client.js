@@ -205,12 +205,9 @@ class ApiClient {
   // Registration
   // ═══════════════════════════════════════════════════════════
 
-  async createRegistration({ fullName, email, phone, churchGkode, kapitaIdSesi1, kapitaIdSesi2 }) {
+  async createRegistration({ uparticipant, kapitaIdSesi1, kapitaIdSesi2 }) {
     const body = {
-      full_name: fullName,
-      email,
-      phone,
-      church_gkode: churchGkode,
+      uparticipant,
       kapita_id_sesi_1: kapitaIdSesi1,
       kapita_id_sesi_2: kapitaIdSesi2,
     };
@@ -221,16 +218,9 @@ class ApiClient {
     return this._request('GET', `/api/registrations/${regId}`);
   }
 
-  async checkRegistration(email) {
-    return this._request('GET', `/api/registrations/check/${email}`);
-  }
-
-  async updateRegistration(regId, { fullName, email, phone, churchGkode, kapitaIdSesi1, kapitaIdSesi2 }) {
+  async updateRegistration(regId, { uparticipant, kapitaIdSesi1, kapitaIdSesi2 }) {
     const body = {
-      full_name: fullName,
-      email,
-      phone,
-      church_gkode: churchGkode,
+      uparticipant,
       kapita_id_sesi_1: kapitaIdSesi1,
       kapita_id_sesi_2: kapitaIdSesi2,
     };
@@ -253,24 +243,18 @@ class ApiClient {
     return this._request('GET', `/api/users/${uid}`);
   }
 
-  async createUser({ fullName, email, phone, churchGkode, ukapitaSesi1, ukapitaSesi2 }) {
+  async createUser({ uparticipant, ukapitaSesi1, ukapitaSesi2 }) {
     const body = {
-      full_name: fullName,
-      email,
-      phone,
-      church_gkode: churchGkode,
+      uparticipant,
       ukapita_sesi_1: ukapitaSesi1,
       ukapita_sesi_2: ukapitaSesi2,
     };
     return this._request('POST', '/api/users', body);
   }
 
-  async updateUser(uid, { fullName, email, phone, churchGkode, ukapitaSesi1, ukapitaSesi2 }) {
+  async updateUser(uid, { uparticipant, ukapitaSesi1, ukapitaSesi2 }) {
     const body = {
-      full_name: fullName,
-      email,
-      phone,
-      church_gkode: churchGkode,
+      uparticipant,
       ukapita_sesi_1: ukapitaSesi1,
       ukapita_sesi_2: ukapitaSesi2,
     };
@@ -316,10 +300,7 @@ async function main() {
 
   // 3. Publik — User
   res = await client.createUser({
-    fullName: 'Yohanes Test',
-    email: 'yohanes@test.com',
-    phone: '08123456789',
-    churchGkode: gkode || 'GKY001',
+    uparticipant: 1,
     ukapitaSesi1: kapitaId || 1,
     ukapitaSesi2: kapitaId || 1,
   });
@@ -334,10 +315,7 @@ async function main() {
     show(`GET /api/users/${uid}`, res);
 
     res = await client.updateUser(uid, {
-      fullName: 'Yohanes Updated',
-      email: 'yohanes@test.com',
-      phone: '08123456789',
-      churchGkode: gkode || 'GKY001',
+      uparticipant: 1,
       ukapitaSesi1: kapitaId || 1,
       ukapitaSesi2: kapitaId || 1,
     });
@@ -346,10 +324,7 @@ async function main() {
 
   // 4. Publik — Registration
   res = await client.createRegistration({
-    fullName: 'Yohanes Test',
-    email: 'yohanes@test.com',
-    phone: '08123456789',
-    churchGkode: gkode || 'GKY001',
+    uparticipant: 1,
     kapitaIdSesi1: kapitaId || 1,
     kapitaIdSesi2: kapitaId || 1,
   });
@@ -360,9 +335,6 @@ async function main() {
     res = await client.getRegistration(regId);
     show(`GET /api/registrations/${regId}`, res);
   }
-
-  res = await client.checkRegistration('yohanes@test.com');
-  show('GET /api/registrations/check/yohanes@test.com', res);
 
   // 5. Login Admin
   res = await client.login('superadmin@gereja.com', 'superadmin123');

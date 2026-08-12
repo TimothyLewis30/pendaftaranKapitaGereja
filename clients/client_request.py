@@ -15,11 +15,13 @@ import string
 import requests
 
 
-BASE_URL = "https://pendaftarankapitagereja.onrender.com"
+# BASE_URL = "https://pendaftarankapitagereja.onrender.com"
+BASE_URL = "http://192.168.31.6:8080"
 
 
 def _load_env_local(p_filename: str = ".env.local") -> dict:
-    v_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), p_filename)
+    v_path = os.path.join(os.path.dirname(
+        os.path.dirname(__file__)), p_filename)
     if not os.path.isfile(v_path):
         return {}
     with open(v_path) as v_f:
@@ -161,13 +163,15 @@ class ApiClient:
         return self._request("GET", f"/api/admins/{p_admin_id}")
 
     def create_admin(self, p_username: str, p_email: str, p_password: str, p_role: str = None) -> dict:
-        v_body = {"username": p_username, "email": p_email, "password": p_password}
+        v_body = {"username": p_username,
+                  "email": p_email, "password": p_password}
         if p_role:
             v_body["role"] = p_role
         return self._request("POST", "/api/admins", p_json_body=v_body)
 
     def update_admin(self, p_admin_id: int, p_username: str, p_email: str, p_password: str, p_role: str = None) -> dict:
-        v_body = {"username": p_username, "email": p_email, "password": p_password}
+        v_body = {"username": p_username,
+                  "email": p_email, "password": p_password}
         if p_role:
             v_body["role"] = p_role
         return self._request("PUT", f"/api/admins/{p_admin_id}", p_json_body=v_body)
@@ -236,31 +240,20 @@ class ApiClient:
 
     # ── Registration ──────────────────────────────────────────
 
-    def create_registration(self, p_full_name: str, p_email: str, p_phone: str,
-                            p_church_gkode: str, p_kapita_id_sesi_1: int, p_kapita_id_sesi_2: int) -> dict:
+    def create_registration(self, p_uparticipant: int, p_kapita_id_sesi_1: int, p_kapita_id_sesi_2: int) -> dict:
         v_body = {
-            "full_name": p_full_name,
-            "email": p_email,
-            "phone": p_phone,
-            "church_gkode": p_church_gkode,
+            "uparticipant": p_uparticipant,
             "kapita_id_sesi_1": p_kapita_id_sesi_1,
             "kapita_id_sesi_2": p_kapita_id_sesi_2,
         }
         return self._request("POST", "/api/registrations", p_json_body=v_body)
 
-    def check_registration(self, p_email: str) -> dict:
-        return self._request("GET", f"/api/registrations/check/{p_email}")
-
     def get_registration(self, p_reg_id: int) -> dict:
         return self._request("GET", f"/api/registrations/{p_reg_id}")
 
-    def update_registration(self, p_reg_id: int, p_full_name: str, p_email: str, p_phone: str,
-                            p_church_gkode: str, p_kapita_id_sesi_1: int, p_kapita_id_sesi_2: int) -> dict:
+    def update_registration(self, p_reg_id: int, p_uparticipant: int, p_kapita_id_sesi_1: int, p_kapita_id_sesi_2: int) -> dict:
         v_body = {
-            "full_name": p_full_name,
-            "email": p_email,
-            "phone": p_phone,
-            "church_gkode": p_church_gkode,
+            "uparticipant": p_uparticipant,
             "kapita_id_sesi_1": p_kapita_id_sesi_1,
             "kapita_id_sesi_2": p_kapita_id_sesi_2,
         }
@@ -277,25 +270,17 @@ class ApiClient:
     def get_user(self, p_uid: int) -> dict:
         return self._request("GET", f"/api/users/{p_uid}")
 
-    def create_user(self, p_full_name: str, p_email: str, p_phone: str,
-                    p_church_gkode: str, p_ukapita_sesi_1: int, p_ukapita_sesi_2: int) -> dict:
+    def create_user(self, p_uparticipant: int, p_ukapita_sesi_1: int, p_ukapita_sesi_2: int) -> dict:
         v_body = {
-            "full_name": p_full_name,
-            "email": p_email,
-            "phone": p_phone,
-            "church_gkode": p_church_gkode,
+            "uparticipant": p_uparticipant,
             "ukapita_sesi_1": p_ukapita_sesi_1,
             "ukapita_sesi_2": p_ukapita_sesi_2,
         }
         return self._request("POST", "/api/users", p_json_body=v_body)
 
-    def update_user(self, p_uid: int, p_full_name: str, p_email: str, p_phone: str,
-                    p_church_gkode: str, p_ukapita_sesi_1: int, p_ukapita_sesi_2: int) -> dict:
+    def update_user(self, p_uid: int, p_uparticipant: int, p_ukapita_sesi_1: int, p_ukapita_sesi_2: int) -> dict:
         v_body = {
-            "full_name": p_full_name,
-            "email": p_email,
-            "phone": p_phone,
-            "church_gkode": p_church_gkode,
+            "uparticipant": p_uparticipant,
             "ukapita_sesi_1": p_ukapita_sesi_1,
             "ukapita_sesi_2": p_ukapita_sesi_2,
         }
@@ -303,6 +288,9 @@ class ApiClient:
 
     def delete_user(self, p_uid: int) -> dict:
         return self._request("DELETE", f"/api/users/{p_uid}")
+
+    def get_participants_by_church(self, p_gereja: str) -> dict:
+        return self._request("GET", "/api/participants", p_params={"gereja": p_gereja})
 
     # ── Cetak Excel ───────────────────────────────────────────
 
@@ -345,14 +333,14 @@ if __name__ == "__main__":
     # ═══════════════════════════════════════════════════════════
     # 1. PUBLIK — Church
     # ═══════════════════════════════════════════════════════════
-    v_resp = v_client.get_churches()
-    show("GET /api/churches", v_resp)
+    # v_resp = v_client.get_churches()
+    # show("GET /api/churches", v_resp)
 
-    v_gkode = v_resp["results"][0]["id"] if v_resp.get("status") and v_resp.get("results") else None
+    # v_gkode = v_resp["results"][0]["id"] if v_resp.get("status") and v_resp.get("results") else None
 
-    if v_gkode:
-        v_resp = v_client.get_church(v_gkode)
-        show(f"GET /api/churches/{v_gkode}", v_resp)
+    # if v_gkode:
+    #     v_resp = v_client.get_church(v_gkode)
+    #     show(f"GET /api/churches/{v_gkode}", v_resp)
 
     # ═══════════════════════════════════════════════════════════
     # 2. PUBLIK — Kapita
@@ -360,20 +348,21 @@ if __name__ == "__main__":
     v_resp = v_client.get_kapita_list()
     show("GET /api/kapita", v_resp)
 
-    v_kapita_id = v_resp["results"][0]["idkapita"] if v_resp.get("status") and v_resp.get("results") else None
+    v_kapita_id = v_resp["results"][0]["idkapita"] if v_resp.get(
+        "status") and v_resp.get("results") else None
 
     if v_kapita_id:
         v_resp = v_client.get_kapita(v_kapita_id)
         show(f"GET /api/kapita/{v_kapita_id}", v_resp)
 
+    v_resp = v_client.get_participants_by_church("GKY001")
+    show("GET /api/participants?gereja=GKY001", v_resp)
+
     # ═══════════════════════════════════════════════════════════
     # 3. PUBLIK — User CRUD
     # ═══════════════════════════════════════════════════════════
     v_resp = v_client.create_user(
-        p_full_name="Yohanes Test",
-        p_email="yohanes@test.com",
-        p_phone="08123456789",
-        p_church_gkode=v_gkode or "GKY001",
+        p_uparticipant=1,
         p_ukapita_sesi_1=v_kapita_id or 1,
         p_ukapita_sesi_2=v_kapita_id or 1,
     )
@@ -387,10 +376,12 @@ if __name__ == "__main__":
         v_resp = v_client.get_user(v_uid)
         show(f"GET /api/users/{v_uid}", v_resp)
 
+        v_resp = v_client.get_participants_by_church("GKY001")
+        show("GET /api/participants?gereja=GKY001 (after user create)", v_resp)
+
         v_resp = v_client.update_user(
-            p_uid=v_uid, p_full_name="Yohanes Updated",
-            p_email="yohanes@test.com", p_phone="08123456789",
-            p_church_gkode=v_gkode or "GKY001", p_ukapita_sesi_1=v_kapita_id or 1, p_ukapita_sesi_2=v_kapita_id or 1,
+            p_uid=v_uid, p_uparticipant=1,
+            p_ukapita_sesi_1=v_kapita_id or 1, p_ukapita_sesi_2=v_kapita_id or 1,
         )
         show(f"PUT /api/users/{v_uid} (update)", v_resp)
 
@@ -401,10 +392,7 @@ if __name__ == "__main__":
     # 4. PUBLIK — Registration CRUD
     # ═══════════════════════════════════════════════════════════
     v_resp = v_client.create_registration(
-        p_full_name="Yohanes Test",
-        p_email="yohanes@test.com",
-        p_phone="08123456789",
-        p_church_gkode=v_gkode or "GKY001",
+        p_uparticipant=1,
         p_kapita_id_sesi_1=v_kapita_id or 1,
         p_kapita_id_sesi_2=v_kapita_id or 1,
     )
@@ -415,14 +403,10 @@ if __name__ == "__main__":
         v_resp = v_client.get_registration(v_reg_id)
         show(f"GET /api/registrations/{v_reg_id}", v_resp)
 
-    v_resp = v_client.check_registration("yohanes@test.com")
-    show("GET /api/registrations/check/yohanes@test.com", v_resp)
-
     if v_reg_id:
         v_resp = v_client.update_registration(
-            p_reg_id=v_reg_id, p_full_name="Yohanes Updated",
-            p_email="yohanes@test.com", p_phone="08123456789",
-            p_church_gkode=v_gkode or "GKY001", p_kapita_id_sesi_1=v_kapita_id or 1, p_kapita_id_sesi_2=v_kapita_id or 1,
+            p_reg_id=v_reg_id, p_uparticipant=1,
+            p_kapita_id_sesi_1=v_kapita_id or 1, p_kapita_id_sesi_2=v_kapita_id or 1,
         )
         show(f"PUT /api/registrations/{v_reg_id} (update)", v_resp)
 
@@ -432,117 +416,117 @@ if __name__ == "__main__":
     # ═══════════════════════════════════════════════════════════
     # 5. LOGIN ADMIN
     # ═══════════════════════════════════════════════════════════
-    v_resp = v_client.login("superadmin@gereja.com", "superadmin123")
-    show("POST /api/admin/login", v_resp)
+    # v_resp = v_client.login("superadmin@gereja.com", "superadmin123")
+    # show("POST /api/admin/login", v_resp)
 
-    if not v_resp.get("status"):
-        print("\n[SKIP] Semua endpoint admin di-skip karena login gagal.")
-    else:
-        v_admin_id = v_resp["results"]["aid"]
-        v_client.set_admin(v_admin_id)
+    # if not v_resp.get("status"):
+    #     print("\n[SKIP] Semua endpoint admin di-skip karena login gagal.")
+    # else:
+    #     v_admin_id = v_resp["results"]["aid"]
+    #     v_client.set_admin(v_admin_id)
 
-        # ═══════════════════════════════════════════════════════
-        # 6. ADMIN — Admin CRUD
-        # ═══════════════════════════════════════════════════════
-        v_resp = v_client.get_admins()
-        show("GET /api/admins", v_resp)
+    #     # ═══════════════════════════════════════════════════════
+    #     # 6. ADMIN — Admin CRUD
+    #     # ═══════════════════════════════════════════════════════
+    #     v_resp = v_client.get_admins()
+    #     show("GET /api/admins", v_resp)
 
-        v_resp = v_client.create_admin(
-            p_username="admin_test", p_email="admin_test@gereja.com",
-            p_password="admin123", p_role="Admin",
-        )
-        show("POST /api/admins (create)", v_resp)
-        v_new_aid = v_resp["results"]["aid"] if v_resp.get("status") else None
+    #     v_resp = v_client.create_admin(
+    #         p_username="admin_test", p_email="admin_test@gereja.com",
+    #         p_password="admin123", p_role="Admin",
+    #     )
+    #     show("POST /api/admins (create)", v_resp)
+    #     v_new_aid = v_resp["results"]["aid"] if v_resp.get("status") else None
 
-        if v_new_aid:
-            v_resp = v_client.get_admin(v_new_aid)
-            show(f"GET /api/admins/{v_new_aid}", v_resp)
+    #     if v_new_aid:
+    #         v_resp = v_client.get_admin(v_new_aid)
+    #         show(f"GET /api/admins/{v_new_aid}", v_resp)
 
-            v_resp = v_client.update_admin(
-                p_admin_id=v_new_aid, p_username="admin_test_updated",
-                p_email="admin_test_updated@gereja.com",
-                p_password="admin123", p_role="Admin",
-            )
-            show(f"PUT /api/admins/{v_new_aid} (update)", v_resp)
+    #         v_resp = v_client.update_admin(
+    #             p_admin_id=v_new_aid, p_username="admin_test_updated",
+    #             p_email="admin_test_updated@gereja.com",
+    #             p_password="admin123", p_role="Admin",
+    #         )
+    #         show(f"PUT /api/admins/{v_new_aid} (update)", v_resp)
 
-            v_resp = v_client.get_admin(v_new_aid)
-            show(f"GET /api/admins/{v_new_aid} (after update)", v_resp)
+    #         v_resp = v_client.get_admin(v_new_aid)
+    #         show(f"GET /api/admins/{v_new_aid} (after update)", v_resp)
 
-            v_resp = v_client.delete_admin(v_new_aid)
-            show(f"DELETE /api/admins/{v_new_aid}", v_resp)
+    #         v_resp = v_client.delete_admin(v_new_aid)
+    #         show(f"DELETE /api/admins/{v_new_aid}", v_resp)
 
-        # ═══════════════════════════════════════════════════════
-        # 7. ADMIN — Church CRUD
-        # ═══════════════════════════════════════════════════════
-        v_resp = v_client.create_church("Gereja Test Admin")
-        show("POST /api/churches (create)", v_resp)
-        v_admin_gkode = v_resp["results"]["id"] if v_resp.get("status") else v_gkode
+    #     # ═══════════════════════════════════════════════════════
+    #     # 7. ADMIN — Church CRUD
+    #     # ═══════════════════════════════════════════════════════
+    #     v_resp = v_client.create_church("Gereja Test Admin")
+    #     show("POST /api/churches (create)", v_resp)
+    #     v_admin_gkode = v_resp["results"]["id"] if v_resp.get("status") else v_gkode
 
-        if v_admin_gkode:
-            v_resp = v_client.get_church(v_admin_gkode)
-            show(f"GET /api/churches/{v_admin_gkode}", v_resp)
+    #     if v_admin_gkode:
+    #         v_resp = v_client.get_church(v_admin_gkode)
+    #         show(f"GET /api/churches/{v_admin_gkode}", v_resp)
 
-            v_resp = v_client.update_church(v_admin_gkode, "Gereja Test Updated")
-            show(f"PUT /api/churches/{v_admin_gkode} (update)", v_resp)
+    #         v_resp = v_client.update_church(v_admin_gkode, "Gereja Test Updated")
+    #         show(f"PUT /api/churches/{v_admin_gkode} (update)", v_resp)
 
-            v_resp = v_client.get_church(v_admin_gkode)
-            show(f"GET /api/churches/{v_admin_gkode} (after update)", v_resp)
+    #         v_resp = v_client.get_church(v_admin_gkode)
+    #         show(f"GET /api/churches/{v_admin_gkode} (after update)", v_resp)
 
-        # ═══════════════════════════════════════════════════════
-        # 8. ADMIN — Kapita CRUD
-        # ═══════════════════════════════════════════════════════
-        v_resp = v_client.create_kapita("Kapita Test Admin")
-        show("POST /api/kapita (create)", v_resp)
-        v_admin_kapita_id = v_resp["results"]["idkapita"] if v_resp.get("status") else v_kapita_id
+    #     # ═══════════════════════════════════════════════════════
+    #     # 8. ADMIN — Kapita CRUD
+    #     # ═══════════════════════════════════════════════════════
+    #     v_resp = v_client.create_kapita("Kapita Test Admin")
+    #     show("POST /api/kapita (create)", v_resp)
+    #     v_admin_kapita_id = v_resp["results"]["idkapita"] if v_resp.get("status") else v_kapita_id
 
-        if v_admin_kapita_id:
-            v_resp = v_client.get_kapita(v_admin_kapita_id)
-            show(f"GET /api/kapita/{v_admin_kapita_id}", v_resp)
+    #     if v_admin_kapita_id:
+    #         v_resp = v_client.get_kapita(v_admin_kapita_id)
+    #         show(f"GET /api/kapita/{v_admin_kapita_id}", v_resp)
 
-            v_resp = v_client.update_kapita(v_admin_kapita_id, "Kapita Test Updated")
-            show(f"PUT /api/kapita/{v_admin_kapita_id} (update)", v_resp)
+    #         v_resp = v_client.update_kapita(v_admin_kapita_id, "Kapita Test Updated")
+    #         show(f"PUT /api/kapita/{v_admin_kapita_id} (update)", v_resp)
 
-            v_resp = v_client.get_kapita(v_admin_kapita_id)
-            show(f"GET /api/kapita/{v_admin_kapita_id} (after update)", v_resp)
+    #         v_resp = v_client.get_kapita(v_admin_kapita_id)
+    #         show(f"GET /api/kapita/{v_admin_kapita_id} (after update)", v_resp)
 
-        # ═══════════════════════════════════════════════════════
-        # 9. ADMIN — Church Kapita Quota CRUD
-        # ═══════════════════════════════════════════════════════
-        if v_admin_gkode and v_admin_kapita_id:
-            v_resp = v_client.set_church_kapita_quota(v_admin_gkode, v_admin_kapita_id, 50, 50)
-            show(f"POST /api/churches/{v_admin_gkode}/kapita-quota (set)", v_resp)
+    #     # ═══════════════════════════════════════════════════════
+    #     # 9. ADMIN — Church Kapita Quota CRUD
+    #     # ═══════════════════════════════════════════════════════
+    #     if v_admin_gkode and v_admin_kapita_id:
+    #         v_resp = v_client.set_church_kapita_quota(v_admin_gkode, v_admin_kapita_id, 50, 50)
+    #         show(f"POST /api/churches/{v_admin_gkode}/kapita-quota (set)", v_resp)
 
-            v_resp = v_client.get_church_kapita_quotas(v_admin_gkode)
-            show(f"GET /api/churches/{v_admin_gkode}/kapita-quota", v_resp)
+    #         v_resp = v_client.get_church_kapita_quotas(v_admin_gkode)
+    #         show(f"GET /api/churches/{v_admin_gkode}/kapita-quota", v_resp)
 
-            v_resp = v_client.get_church_kapita_quota(v_admin_gkode, v_admin_kapita_id)
-            show(f"GET /api/churches/{v_admin_gkode}/kapita-quota/{v_admin_kapita_id}", v_resp)
+    #         v_resp = v_client.get_church_kapita_quota(v_admin_gkode, v_admin_kapita_id)
+    #         show(f"GET /api/churches/{v_admin_gkode}/kapita-quota/{v_admin_kapita_id}", v_resp)
 
-            v_resp = v_client.update_church_kapita_quota(v_admin_gkode, v_admin_kapita_id, 100, 100)
-            show(f"PUT /api/churches/{v_admin_gkode}/kapita-quota/{v_admin_kapita_id} (update)", v_resp)
+    #         v_resp = v_client.update_church_kapita_quota(v_admin_gkode, v_admin_kapita_id, 100, 100)
+    #         show(f"PUT /api/churches/{v_admin_gkode}/kapita-quota/{v_admin_kapita_id} (update)", v_resp)
 
-            v_resp = v_client.get_church_kapita_quota(v_admin_gkode, v_admin_kapita_id)
-            show(f"GET /api/churches/{v_admin_gkode}/kapita-quota/{v_admin_kapita_id} (after update)", v_resp)
+    #         v_resp = v_client.get_church_kapita_quota(v_admin_gkode, v_admin_kapita_id)
+    #         show(f"GET /api/churches/{v_admin_gkode}/kapita-quota/{v_admin_kapita_id} (after update)", v_resp)
 
-        # ═══════════════════════════════════════════════════════
-        # 10. CLEANUP — Hapus semua data test (reverse order)
-        # ═══════════════════════════════════════════════════════
-        if v_reg_id:
-            v_resp = v_client.delete_registration(v_reg_id)
-            show(f"DELETE /api/registrations/{v_reg_id}", v_resp)
+    #     # ═══════════════════════════════════════════════════════
+    #     # 10. CLEANUP — Hapus semua data test (reverse order)
+    #     # ═══════════════════════════════════════════════════════
+    #     if v_reg_id:
+    #         v_resp = v_client.delete_registration(v_reg_id)
+    #         show(f"DELETE /api/registrations/{v_reg_id}", v_resp)
 
-        if v_uid:
-            v_resp = v_client.delete_user(v_uid)
-            show(f"DELETE /api/users/{v_uid}", v_resp)
+    #     if v_uid:
+    #         v_resp = v_client.delete_user(v_uid)
+    #         show(f"DELETE /api/users/{v_uid}", v_resp)
 
-        if v_admin_gkode and v_admin_kapita_id:
-            v_resp = v_client.delete_church_kapita_quota(v_admin_gkode, v_admin_kapita_id)
-            show(f"DELETE /api/churches/{v_admin_gkode}/kapita-quota/{v_admin_kapita_id}", v_resp)
+    #     if v_admin_gkode and v_admin_kapita_id:
+    #         v_resp = v_client.delete_church_kapita_quota(v_admin_gkode, v_admin_kapita_id)
+    #         show(f"DELETE /api/churches/{v_admin_gkode}/kapita-quota/{v_admin_kapita_id}", v_resp)
 
-        if v_admin_kapita_id:
-            v_resp = v_client.delete_kapita(v_admin_kapita_id)
-            show(f"DELETE /api/kapita/{v_admin_kapita_id}", v_resp)
+    #     if v_admin_kapita_id:
+    #         v_resp = v_client.delete_kapita(v_admin_kapita_id)
+    #         show(f"DELETE /api/kapita/{v_admin_kapita_id}", v_resp)
 
-        if v_admin_gkode:
-            v_resp = v_client.delete_church(v_admin_gkode)
-            show(f"DELETE /api/churches/{v_admin_gkode}", v_resp)
+    #     if v_admin_gkode:
+    #         v_resp = v_client.delete_church(v_admin_gkode)
+    #         show(f"DELETE /api/churches/{v_admin_gkode}", v_resp)
