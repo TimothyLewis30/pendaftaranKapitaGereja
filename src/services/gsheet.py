@@ -16,7 +16,7 @@ except Exception:
     _settings = None
 
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID") or (getattr(_settings, "SPREADSHEET_ID", None) if _settings else None)
-DEFAULT_SHEET_NAME = "UTAMA"
+DEFAULT_SHEET_NAME = "UTAMA-KAPITA"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 
