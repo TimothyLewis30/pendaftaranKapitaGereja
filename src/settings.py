@@ -20,6 +20,7 @@ if os.path.isfile(_env_local_path):
     DB_USER      = _env["database"]["user"]
     DB_PASSWORD  = _env["database"]["password"]
     DB_NAME      = _env["database"]["name"]
+    SPREADSHEET_ID = _env.get("google", {}).get("spreadsheet_id", "")
 else:
     SECRET_KEY   = os.environ["SECRET_KEY"]
     APP_STATUS   = os.environ["APP_STATUS"]
@@ -31,6 +32,7 @@ else:
     DB_USER      = os.environ["DB_USER"]
     DB_PASSWORD  = os.environ["DB_PASSWORD"]
     DB_NAME      = os.environ["DB_NAME"]
+    SPREADSHEET_ID = os.environ["SPREADSHEET_ID"]
 
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)

@@ -307,18 +307,20 @@ def dao_get_church_kapita_quotas(p_gkode):
     try:
         v_conn = get_connection()
         v_cursor = v_conn.cursor()
+        
+        # SQL dengan perbaikan:
+        # 1. 'is_few_church' hanya mengecek gereja spesifik (p_gkode), bukan seluruh gereja di DB.
+        # 2. Parameter tuple diisi 3x sesuai %s (p_gkode, p_gkode, p_gkode).
         v_cursor.execute("""
             WITH participant_count AS (
-                SELECT COUNT(*) AS total FROM participant WHERE pgereja = %s
+                SELECT COUNT(*) AS total 
+                FROM participant 
+                WHERE pgereja = %s
             ),
-            few_churches AS (
-                SELECT COUNT(*) AS cnt FROM (
-                    SELECT g.gkode
-                    FROM gereja g
-                    LEFT JOIN participant p ON p.pgereja = g.gkode
-                    GROUP BY g.gkode
-                    HAVING COUNT(p.pid) < 4
-                ) t
+            is_few_church AS (
+                SELECT CASE WHEN COUNT(*) < 4 THEN 1 ELSE 0 END AS bonus
+                FROM participant 
+                WHERE pgereja = %s
             ),
             sesi_1 AS (
                 SELECT ugereja AS gkode, ukapita_sesi_1 AS idkapita FROM users
@@ -331,25 +333,25 @@ def dao_get_church_kapita_quotas(p_gkode):
                 SELECT church_gkode AS gkode, kapita_id_sesi_2 AS idkapita FROM registrations
             )
             SELECT
-                gk.gkid            AS gkid,
-                gk.gkode           AS gkode,
-                gk.idkapita        AS idkapita,
-                k.namakapita       AS kapita_name,
-                gk.kuota_sesi_1    AS manual_kuota_sesi_1,
-                gk.kuota_sesi_2    AS manual_kuota_sesi_2,
-                COALESCE(r1.reg_count, 0) AS registered_sesi_1,
-                COALESCE(r2.reg_count, 0) AS registered_sesi_2,
+                gk.gkid                    AS gkid,
+                gk.gkode                   AS gkode,
+                gk.idkapita                AS idkapita,
+                k.namakapita               AS kapita_name,
+                gk.kuota_sesi_1             AS manual_kuota_sesi_1,
+                gk.kuota_sesi_2             AS manual_kuota_sesi_2,
+                COALESCE(r1.reg_count, 0)  AS registered_sesi_1,
+                COALESCE(r2.reg_count, 0)  AS registered_sesi_2,
                 CASE
                     WHEN gk.idkapita IN (5, 6)
                         THEN FLOOR(pc.total / 4) + CASE WHEN (pc.total %% 4) IN (1, 2, 3) THEN 1 ELSE 0 END
                     WHEN gk.idkapita IN (7, 8)
                         THEN FLOOR(pc.total / 4) + CASE WHEN (pc.total %% 4) = 3 THEN 1 ELSE 0 END
                     ELSE 0
-                END + fc.cnt AS system_kuota
+                END + fc.bonus AS system_kuota
             FROM gereja_kapita gk
             JOIN kapita k ON k.idkapita = gk.idkapita
             CROSS JOIN participant_count pc
-            CROSS JOIN few_churches fc
+            CROSS JOIN is_few_church fc
             LEFT JOIN (
                 SELECT gkode, idkapita, COUNT(*) AS reg_count
                 FROM sesi_1
@@ -362,25 +364,33 @@ def dao_get_church_kapita_quotas(p_gkode):
             ) r2 ON r2.gkode = gk.gkode AND r2.idkapita = gk.idkapita
             WHERE gk.gkode = %s
             ORDER BY k.namakapita ASC
-        """, (p_gkode, p_gkode))  # <-- Diubah menjadi (p_gkode, p_gkode)
+        """, (p_gkode, p_gkode, p_gkode))
 
         v_rows = []
         for v_row in v_cursor.fetchall() or []:
             if not v_row:
                 continue
-            v_manual_kuota_sesi_1 = v_row.get("manual_kuota_sesi_1", 0)
-            v_manual_kuota_sesi_2 = v_row.get("manual_kuota_sesi_2", 0)
-            v_system_kuota = v_row.get("system_kuota", 0)
-            v_kuota_sesi_1 = max(v_manual_kuota_sesi_1, v_system_kuota)
-            v_kuota_sesi_2 = max(v_manual_kuota_sesi_2, v_system_kuota)
+            
+            v_manual_kuota_sesi_1 = v_row.get("manual_kuota_sesi_1") or 0
+            v_manual_kuota_sesi_2 = v_row.get("manual_kuota_sesi_2") or 0
+            v_system_kuota = v_row.get("system_kuota") or 0
+            
+            # Prioritas Kuota: Gunakan nilai manual jika > 0, jika tidak gunakan system_kuota
+            v_kuota_sesi_1 = v_manual_kuota_sesi_1 if v_manual_kuota_sesi_1 > 0 else v_system_kuota
+            v_kuota_sesi_2 = v_manual_kuota_sesi_2 if v_manual_kuota_sesi_2 > 0 else v_system_kuota
+
             v_row["kuota_sesi_1"] = v_kuota_sesi_1
             v_row["kuota_sesi_2"] = v_kuota_sesi_2
-            v_row["quota_left_sesi_1"] = v_kuota_sesi_1 - v_row.get("registered_sesi_1", 0)
-            v_row["quota_left_sesi_2"] = v_kuota_sesi_2 - v_row.get("registered_sesi_2", 0)
+            v_row["quota_left_sesi_1"] = max(0, v_kuota_sesi_1 - v_row.get("registered_sesi_1", 0))
+            v_row["quota_left_sesi_2"] = max(0, v_kuota_sesi_2 - v_row.get("registered_sesi_2", 0))
+
+            # Hapus atribut internal kalkulasi sebelum dikembalikan
             v_row.pop("manual_kuota_sesi_1", None)
             v_row.pop("manual_kuota_sesi_2", None)
             v_row.pop("system_kuota", None)
+            
             v_rows.append(v_row)
+            
         return v_rows
     except Exception as e:
         logger.error("dao_get_church_kapita_quotas: %s", str(e))
@@ -388,8 +398,7 @@ def dao_get_church_kapita_quotas(p_gkode):
     finally:
         if v_cursor:
             v_cursor.close()
-
-
+    
 
 def dao_count_all_registrations_by_church(p_gkode):
     v_cursor = None

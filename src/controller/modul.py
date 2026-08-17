@@ -24,6 +24,10 @@ from src.dao.modul import (
     dao_update_user, dao_delete_user, dao_count_users_by_church_and_kapita,
     dao_get_participants_by_church, dao_get_participant_by_id,
 )
+try:
+    from src.services.gsheet import update_kapita_for_pid
+except Exception:
+    update_kapita_for_pid = None
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -571,7 +575,12 @@ def ctrl_create_user(p_payload):
     v_saved = dao_get_user_by_id(v_new_id)
     if not v_saved:
         raise ServiceException(status_code=500, detail="Gagal mengambil data user setelah disimpan.")
-
+    # update Google Sheet if service available
+    if update_kapita_for_pid:
+        try:
+            update_kapita_for_pid(v_saved["uparticipant"], v_saved.get("kapita_name_sesi_1", ""), v_saved.get("kapita_name_sesi_2", ""))
+        except Exception:
+            pass
     return {
         "uid": v_saved["uid"],
         "full_name": v_saved["unama"],
@@ -642,6 +651,13 @@ def ctrl_update_user(p_uid, p_payload):
         p_uparticipant=p_payload.uparticipant,
     )
     v_updated = dao_get_user_by_id(p_uid)
+    # update Google Sheet if service available
+    if update_kapita_for_pid:
+        try:
+            update_kapita_for_pid(v_updated["uparticipant"], v_updated.get("kapita_name_sesi_1", ""), v_updated.get("kapita_name_sesi_2", ""))
+        except Exception:
+            pass
+
     return {
         "uid": v_updated["uid"],
         "full_name": v_updated["unama"],
