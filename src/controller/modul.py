@@ -429,6 +429,23 @@ def ctrl_create_registration(p_payload):
     if not v_saved:
         raise ServiceException(status_code=500, detail="Gagal mengambil data pendaftaran setelah disimpan.")
 
+    # ----------------------------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------------------------
+    v_new_id = v_saved["results"][0]["uid"]
+    v_saved = dao_get_user_by_id(v_new_id)
+    if not v_saved:
+        raise ServiceException(status_code=500, detail="Gagal mengambil data user setelah disimpan.")
+    # update Google Sheet if service available
+    if update_kapita_for_pid:
+        try:
+            update_kapita_for_pid(v_saved["uparticipant"], v_saved.get("kapita_name_sesi_1", ""), v_saved.get("kapita_name_sesi_2", ""))
+        except Exception:
+            pass
+
+    
     return {
         "id": v_saved["uid"],
         "full_name": v_saved["full_name"],
