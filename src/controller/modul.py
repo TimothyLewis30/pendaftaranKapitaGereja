@@ -434,7 +434,18 @@ def ctrl_create_registration(p_payload):
     # ----------------------------------------------------------------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------------------------
-    v_new_id = v_saved["results"][0]["uid"]
+    # Jika v_saved mengembalikan dictionary objek langsung:
+    if  "uid" in v_saved:
+        v_new_id = v_saved["uid"]
+    
+    # Jika v_saved dibungkus dalam key 'results':
+    elif v_saved and "results" in v_saved and len(v_saved["results"]) > 0:
+        v_new_id = v_saved["results"][0]["uid"]
+    
+    # Jika struktur tidak sesuai / terjadi error:
+    else:
+        raise ValueError(f"Gagal mengambil UID. Respons data: {v_saved}")
+        
     v_saved = dao_get_user_by_id(v_new_id)
     if not v_saved:
         raise ServiceException(status_code=500, detail="Gagal mengambil data user setelah disimpan.")
