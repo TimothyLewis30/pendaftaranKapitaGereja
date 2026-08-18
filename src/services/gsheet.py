@@ -8,8 +8,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 logger = logging.getLogger(__name__)
-# SPREADSHEET_ID must be the spreadsheet identifier (not credentials).
-# Prefer environment variable, fallback to src.settings.SPREADSHEET_ID if available.
+
 try:
     from src import settings as _settings
 except Exception:
@@ -21,92 +20,110 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 
 def _get_service():
-    """Create Sheets API service using credentials from environment variables.
+    """Create Sheets API service using credentials from environment variables."""
+    v_raw = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+    v_creds = None
 
-    Priority:
-    1. GOOGLE_SERVICE_ACCOUNT_JSON (raw JSON)
-    2. credential.json file (local dev fallback)
-    """
-    raw = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
-    creds = None
-
-    if raw:
+    if v_raw:
         try:
-            info = json.loads(raw)
-            creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+            v_info = json.loads(v_raw)
+            v_creds = service_account.Credentials.from_service_account_info(v_info, scopes=SCOPES)
         except Exception as e:
             logger.error("Invalid GOOGLE_SERVICE_ACCOUNT_JSON: %s", e)
             raise
     else:
-        # Local fallback for development
-        creds = service_account.Credentials.from_service_account_file("credential.json", scopes=SCOPES)
+        v_creds = service_account.Credentials.from_service_account_file("credential.json", scopes=SCOPES)
 
-    return build("sheets", "v4", credentials=creds)
+    return build("sheets", "v4", credentials=v_creds)
 
 
 def _find_row_for_pid(p_service, p_pid, p_sheet_name: str = DEFAULT_SHEET_NAME) -> Optional[int]:
     if not SPREADSHEET_ID:
-        logger.error("SPREADSHEET_ID is not configured in environment or settings.")
+        logger.error("[SHEET DEBUG] SPREADSHEET_ID belum terkonfigurasi di environment atau settings!")
         return None
 
     v_range_name = f"'{p_sheet_name}'!B:B"
-    v_result = p_service.spreadsheets().values().get(
-        spreadsheetId=SPREADSHEET_ID, range=v_range_name
-    ).execute()
-    v_values = v_result.get("values", [])
+    logger.info("[SHEET DEBUG] Mencari p_pid: '%s' (Type: %s) pada range: %s", p_pid, type(p_pid).__name__, v_range_name)
 
-    # Konversi PID pencarian ke string murni tanpa desimal
+    try:
+        v_result = p_service.spreadsheets().values().get(
+            spreadsheetId=SPREADSHEET_ID, range=v_range_name
+        ).execute()
+    except Exception as e:
+        logger.error("[SHEET DEBUG] Gagal mengambil data dari Google Sheet API: %s", str(e))
+        raise e
+
+    v_values = v_result.get("values", [])
+    logger.info("[SHEET DEBUG] Total baris terbaca dari Kolom B: %d baris", len(v_values))
+
+    if not v_values:
+        logger.warning("[SHEET DEBUG] Kolom B kosong atau sheet '%s' tidak memiliki data.", p_sheet_name)
+        return None
+
+    # Normalisasi p_pid pencarian
     v_target_pid = str(p_pid).strip().split('.')[0]
+    logger.info("[SHEET DEBUG] Target PID setelah normalisasi: '%s'", v_target_pid)
 
     for v_idx, v_row in enumerate(v_values, start=1):
         if not v_row:
             continue
         
-        # Ambil nilai sel kolom B dan konversi ke string murni tanpa desimal
-        v_cell_val = str(v_row[0]).strip().split('.')[0]
+        v_raw_val = v_row[0]
+        v_cell_val = str(v_raw_val).strip().split('.')[0]
+        
+        # Cetak log 10 baris pertama atau saat ada match untuk pengecekan
+        if v_idx <= 10 or v_cell_val == v_target_pid:
+            logger.info("[SHEET DEBUG] Baris %d: Nilai Asli='%s' | Ter-normalisasi='%s' | Match=%s", 
+                        v_idx, v_raw_val, v_cell_val, (v_cell_val == v_target_pid))
         
         if v_cell_val == v_target_pid:
+            logger.info("[SHEET DEBUG] SUKSES! PID '%s' ditemukan di Baris %d", p_pid, v_idx)
             return v_idx
 
-    logger.warning("PID '%s' tidak ditemukan pada Kolom B di sheet '%s'", p_pid, p_sheet_name)
+    logger.warning("[SHEET DEBUG] GAGAL! PID '%s' (target: '%s') TIDAK ditemukan di seluruh Kolom B.", p_pid, v_target_pid)
     return None
 
 
-def update_kapita_for_pid(pid: int, kapita_sesi1: str, kapita_sesi2: str, sheet_name: str = DEFAULT_SHEET_NAME, max_retries: int = 3, backoff: float = 1.0) -> bool:
-    """Update columns J and K for the row where column B == pid.
+def update_kapita_for_pid(
+    p_pid, 
+    p_kapita_sesi1: str, 
+    p_kapita_sesi2: str, 
+    p_sheet_name: str = DEFAULT_SHEET_NAME, 
+    p_max_retries: int = 3, 
+    p_backoff: float = 1.0
+) -> bool:
+    """Update kolom J dan K untuk baris tempat kolom B == p_pid."""
+    v_attempt = 0
+    v_last_exc = None
 
-    Retries on transient errors with exponential backoff. Returns True on success.
-    """
-    attempt = 0
-    last_exc = None
-    while attempt < max_retries:
+    while v_attempt < p_max_retries:
         try:
-            service = _get_service()
-            row = _find_row_for_pid(service, pid, sheet_name)
-            if row is None:
-                logger.info("PID %s not found in sheet %s", pid, sheet_name)
+            v_service = _get_service()
+            v_row = _find_row_for_pid(v_service, p_pid, p_sheet_name)
+            if v_row is None:
+                logger.info("PID %s not found in sheet %s", p_pid, p_sheet_name)
                 return False
 
-            range_update = f"'{sheet_name}'!J{row}:K{row}"
-            body = {"values": [[kapita_sesi1, kapita_sesi2]]}
+            v_range_update = f"'{p_sheet_name}'!J{v_row}:K{v_row}"
+            v_body = {"values": [[p_kapita_sesi1, p_kapita_sesi2]]}
 
-            result = service.spreadsheets().values().update(
+            v_result = v_service.spreadsheets().values().update(
                 spreadsheetId=SPREADSHEET_ID,
-                range=range_update,
+                range=v_range_update,
                 valueInputOption="RAW",
-                body=body,
+                body=v_body,
             ).execute()
 
-            updated = result.get("updatedCells", 0)
-            logger.info("Updated pid %s row %s (updatedCells=%s)", pid, row, updated)
+            v_updated = v_result.get("updatedCells", 0)
+            logger.info("Updated pid %s row %s (updatedCells=%s)", p_pid, v_row, v_updated)
             return True
 
         except Exception as e:
-            last_exc = e
-            attempt += 1
-            wait = backoff * (2 ** (attempt - 1))
-            logger.warning("Attempt %s to update sheet failed: %s. Retrying in %.1fs...", attempt, str(e), wait)
-            time.sleep(wait)
+            v_last_exc = e
+            v_attempt += 1
+            v_wait = p_backoff * (2 ** (v_attempt - 1))
+            logger.warning("Attempt %s to update sheet failed: %s. Retrying in %.1fs...", v_attempt, str(e), v_wait)
+            time.sleep(v_wait)
 
-    logger.error("Failed to update kapita for pid %s after %s attempts: %s", pid, max_retries, str(last_exc))
+    logger.error("Failed to update kapita for pid %s after %s attempts: %s", p_pid, p_max_retries, str(v_last_exc))
     return False
