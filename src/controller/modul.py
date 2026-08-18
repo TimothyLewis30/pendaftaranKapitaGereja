@@ -24,10 +24,7 @@ from src.dao.modul import (
     dao_update_user, dao_delete_user, dao_count_users_by_church_and_kapita,
     dao_get_participants_by_church, dao_get_participant_by_id,
 )
-try:
-    from src.services.gsheet import update_kapita_for_pid
-except Exception:
-    update_kapita_for_pid = None
+from src.services.gsheet import update_kapita_for_pid
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -426,6 +423,7 @@ def ctrl_create_registration(p_payload):
         p_uparticipant=p_payload.uparticipant,
     )
     v_saved = dao_get_registration_by_id(v_new_id)
+    print("HASIL DARI V_SAVED",v_saved)
     if not v_saved:
         raise ServiceException(status_code=500, detail="Gagal mengambil data pendaftaran setelah disimpan.")
 
@@ -437,10 +435,14 @@ def ctrl_create_registration(p_payload):
     # Jika v_saved mengembalikan dictionary objek langsung:
     if  "uid" in v_saved:
         v_new_id = v_saved["uid"]
+        v_update_gsheet  = update_kapita_for_pid(v_saved["uparticipant"], v_saved.get("kapita_name_sesi_1", ""), v_saved.get("kapita_name_sesi_2", ""))
+        print("HASIL DARI UPDATE GSHEET 1",v_update_gsheet)
     
     # Jika v_saved dibungkus dalam key 'results':
     elif v_saved and "results" in v_saved and len(v_saved["results"]) > 0:
         v_new_id = v_saved["results"][0]["uid"]
+        v_update_gsheet  = update_kapita_for_pid(v_saved["uparticipant"], v_saved.get("kapita_name_sesi_1", ""), v_saved.get("kapita_name_sesi_2", ""))
+        print("HASIL DARI UPDATE GSHEET 2",v_update_gsheet)
     
     # Jika struktur tidak sesuai / terjadi error:
     else:
@@ -450,11 +452,6 @@ def ctrl_create_registration(p_payload):
     # if not v_saved:
     #     raise ServiceException(status_code=500, detail="Gagal mengambil data user setelah disimpan.")
     # update Google Sheet if service available
-    if update_kapita_for_pid:
-        try:
-            update_kapita_for_pid(v_saved["uparticipant"], v_saved.get("kapita_name_sesi_1", ""), v_saved.get("kapita_name_sesi_2", ""))
-        except Exception:
-            pass
 
     
     return {
