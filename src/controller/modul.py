@@ -424,25 +424,44 @@ def ctrl_create_registration(p_payload):
     )
     v_saved = dao_get_registration_by_id(v_new_id)
     print("HASIL DARI V_SAVED",v_saved)
+    v_saved = dao_get_registration_by_id(v_new_id)
+    print("HASIL DARI V_SAVED", v_saved)
     if not v_saved:
         raise ServiceException(status_code=500, detail="Gagal mengambil data pendaftaran setelah disimpan.")
-
+    
     # ----------------------------------------------------------------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------------------------
     # Jika v_saved mengembalikan dictionary objek langsung:
-    if  "uid" in v_saved:
+    if "uid" in v_saved:
         v_new_id = v_saved["uid"]
-        v_update_gsheet  = update_kapita_for_pid(v_saved["uparticipant"], v_saved.get("kapita_name_sesi_1", ""), v_saved.get("kapita_name_sesi_2", ""))
-        print("HASIL DARI UPDATE GSHEET 1",v_update_gsheet)
+        v_update_gsheet = update_kapita_for_pid(
+            v_saved["uparticipant"],
+            v_saved["full_name"],
+            v_saved["church_name"],
+            v_saved["kapita_id_sesi_1"],
+            v_saved["kapita_id_sesi_2"],
+            v_saved["kapita_name_sesi_1"],
+            v_saved["kapita_name_sesi_2"]
+        )
+        print("HASIL DARI UPDATE GSHEET 1", v_update_gsheet)
     
     # Jika v_saved dibungkus dalam key 'results':
     elif v_saved and "results" in v_saved and len(v_saved["results"]) > 0:
-        v_new_id = v_saved["results"][0]["uid"]
-        v_update_gsheet  = update_kapita_for_pid(v_saved["uparticipant"], v_saved.get("kapita_name_sesi_1", ""), v_saved.get("kapita_name_sesi_2", ""))
-        print("HASIL DARI UPDATE GSHEET 2",v_update_gsheet)
+        v_item = v_saved["results"][0]
+        v_new_id = v_item["uid"]
+        v_update_gsheet = update_kapita_for_pid(
+            v_item["uparticipant"],
+            v_item["full_name"],
+            v_item["church_name"],
+            v_item["kapita_id_sesi_1"],
+            v_item["kapita_id_sesi_2"],
+            v_item["kapita_name_sesi_1"],
+            v_item["kapita_name_sesi_2"]
+        )
+        print("HASIL DARI UPDATE GSHEET 2", v_update_gsheet)
     
     # Jika struktur tidak sesuai / terjadi error:
     else:
