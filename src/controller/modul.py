@@ -446,9 +446,9 @@ def ctrl_create_registration(p_payload):
     else:
         raise ValueError(f"Gagal mengambil UID. Respons data: {v_saved}")
         
-    v_saved = dao_get_user_by_id(v_new_id)
-    if not v_saved:
-        raise ServiceException(status_code=500, detail="Gagal mengambil data user setelah disimpan.")
+    # v_saved = dao_get_user_by_id(v_new_id)
+    # if not v_saved:
+    #     raise ServiceException(status_code=500, detail="Gagal mengambil data user setelah disimpan.")
     # update Google Sheet if service available
     if update_kapita_for_pid:
         try:
