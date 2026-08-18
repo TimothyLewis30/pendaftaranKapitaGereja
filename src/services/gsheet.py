@@ -44,21 +44,31 @@ def _get_service():
     return build("sheets", "v4", credentials=creds)
 
 
-def _find_row_for_pid(service, pid: int, sheet_name: str = DEFAULT_SHEET_NAME) -> Optional[int]:
+def _find_row_for_pid(p_service, p_pid, p_sheet_name: str = DEFAULT_SHEET_NAME) -> Optional[int]:
     if not SPREADSHEET_ID:
         logger.error("SPREADSHEET_ID is not configured in environment or settings.")
         return None
 
-    range_name = f"'{sheet_name}'!B:B"
-    result = service.spreadsheets().values().get(
-        spreadsheetId=SPREADSHEET_ID, range=range_name
+    v_range_name = f"'{p_sheet_name}'!B:B"
+    v_result = p_service.spreadsheets().values().get(
+        spreadsheetId=SPREADSHEET_ID, range=v_range_name
     ).execute()
-    values = result.get("values", [])
+    v_values = v_result.get("values", [])
 
-    for idx, row in enumerate(values, start=1):
-        cell = row[0] if len(row) > 0 else ""
-        if str(cell).strip() == str(pid).strip():
-            return idx
+    # Konversi PID pencarian ke string murni tanpa desimal
+    v_target_pid = str(p_pid).strip().split('.')[0]
+
+    for v_idx, v_row in enumerate(v_values, start=1):
+        if not v_row:
+            continue
+        
+        # Ambil nilai sel kolom B dan konversi ke string murni tanpa desimal
+        v_cell_val = str(v_row[0]).strip().split('.')[0]
+        
+        if v_cell_val == v_target_pid:
+            return v_idx
+
+    logger.warning("PID '%s' tidak ditemukan pada Kolom B di sheet '%s'", p_pid, p_sheet_name)
     return None
 
 
