@@ -25,21 +25,27 @@ KAPITA_COLUMN_MAP: Dict[int, tuple] = {
 
 
 def _get_service():
-    """Membuat service Google Sheets API menggunakan credentials."""
-    v_raw = getattr(settings, "GOOGLE_SERVICE_ACCOUNT_JSON", None)
+    print("\n[PRINT CHECK] === STEP 1: MENCOBA AUTENTIKASI GOOGLE API ===")
+    v_raw = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
     v_creds = None
 
     if v_raw:
+        print("[PRINT CHECK] Membaca credential dari Environment Variable 'GOOGLE_SERVICE_ACCOUNT_JSON'...")
         try:
             v_info = json.loads(v_raw)
             v_creds = service_account.Credentials.from_service_account_info(v_info, scopes=SCOPES)
+            print("[PRINT CHECK] OK: Credential JSON berhasil di-parse.")
         except Exception as e:
-            logger.error("Invalid GOOGLE_SERVICE_ACCOUNT_JSON: %s", e)
+            print(f"[PRINT CHECK] ERROR: Format GOOGLE_SERVICE_ACCOUNT_JSON tidak valid: {e}")
             raise
     else:
+        print("[PRINT CHECK] Environment variable kosong, membaca dari file lokal 'credential.json'...")
         v_creds = service_account.Credentials.from_service_account_file("credential.json", scopes=SCOPES)
+        print("[PRINT CHECK] OK: File credential.json berhasil dibaca.")
 
-    return build("sheets", "v4", credentials=v_creds)
+    v_service = build("sheets", "v4", credentials=v_creds)
+    print("[PRINT CHECK] OK: Google Sheets API Service berhasil dibuat.")
+    return v_service
 
 
 def _find_row_for_pid(p_service, p_pid, p_sheet_name: str) -> Optional[int]:
