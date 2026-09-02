@@ -337,8 +337,9 @@ def dao_get_church_kapita_quotas(p_gkode):
                 gk.gkode                   AS gkode,
                 gk.idkapita                AS idkapita,
                 k.namakapita               AS kapita_name,
-                gk.kuota_sesi_1             AS manual_kuota_sesi_1,
-                gk.kuota_sesi_2             AS manual_kuota_sesi_2,
+                k.namakapita_sesi2         AS kapita_name_sesi2,
+                gk.kuota_sesi_1            AS manual_kuota_sesi_1,
+                gk.kuota_sesi_2            AS manual_kuota_sesi_2,
                 COALESCE(r1.reg_count, 0)  AS registered_sesi_1,
                 COALESCE(r2.reg_count, 0)  AS registered_sesi_2,
                 CASE
