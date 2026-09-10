@@ -127,6 +127,7 @@ class ChurchDetailResource(Resource):
 class ChurchKapitaQuotaListResource(Resource):
     def get(self, p_church_gkode):
         v_data = ctrl_get_church_kapita_quotas(p_church_gkode)
+        print("v_data", v_data)
         return responseJson(200, True, "Daftar kuota kapita gereja berhasil ditemukan.", v_data)
 
     def post(self, p_church_gkode):

@@ -274,6 +274,7 @@ def ctrl_get_church_kapita_quotas(p_church_gkode):
     if not v_church:
         raise ServiceException(status_code=404, detail=f"Gereja dengan kode {p_church_gkode} tidak ditemukan.")
     v_quotas = dao_get_church_kapita_quotas(p_church_gkode)
+    print("HASIL DARI v_quotas", v_quotas)
     v_result = []
     for k in v_quotas:
         v_result.append({
@@ -287,6 +288,7 @@ def ctrl_get_church_kapita_quotas(p_church_gkode):
             "effective_left": k["quota_left_sesi_1"] + k["quota_left_sesi_2"],
             "flag_kapita": "T" if (k["quota_left_sesi_1"] > 0 or k["quota_left_sesi_2"] > 0) else "F",
         })
+    print("HASIL DARI v_result", v_result)
     return v_result
 
 
