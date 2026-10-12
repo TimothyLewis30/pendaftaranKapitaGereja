@@ -690,7 +690,7 @@ def dao_get_registration_by_id(p_reg_id):
         v_cursor.execute("""
             SELECT u.uid, u.unama AS full_name, u.ugereja AS church_gkode, g.gnama AS church_name,
                    u.ukapita_sesi_1 AS kapita_id_sesi_1, k1.namakapita AS kapita_name_sesi_1,
-                   u.ukapita_sesi_2 AS kapita_id_sesi_2, k2.namakapita AS kapita_name_sesi_2,
+                   u.ukapita_sesi_2 AS kapita_id_sesi_2, k2.namakapita_sesi2 AS kapita_name_sesi_2,
                    u.uparticipant, u.uregistered_at AS registered_at
             FROM users u
             LEFT JOIN gereja g ON g.gkode = u.ugereja
